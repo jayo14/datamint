@@ -1,0 +1,10 @@
+fix: DataMint Hackathon Demo Preparation
+
+- Fixed critical bugs in auth callback, middleware, and payments logic.
+- Implemented AI validation API using OpenAI gpt-4o-mini.
+- Added creator submissions dashboard with manual payout trigger.
+- Integrated ERC-8004 agent registration UI and logic.
+- Added dataset export functionality (JSON format).
+- Updated Next.js routes for version 15+ compatibility.
+- Defined initial Supabase schema migration and bucket configuration.
+- Configured src/proxy.ts for session management.
