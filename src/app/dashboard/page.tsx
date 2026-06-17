@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { fundDataset as fundDatasetOnChain } from '@/lib/blockchain'
 import { ethers, type Signer, type Eip1193Provider } from 'ethers'
-import { Plus, Database, Wallet, CheckCircle2, BarChart3, ArrowUpRight } from 'lucide-react'
+import { Plus, Database, Wallet, CheckCircle2, BarChart3, ArrowUpRight, ShieldCheck } from 'lucide-react'
 
 interface Dataset {
   id: number;

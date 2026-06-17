@@ -5,16 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ethers, type Eip1193Provider } from 'ethers'
 import { CheckCircle2, XCircle, Clock, Coins } from 'lucide-react'
-
-const ESCROW_ABI = [
-  "function approveWork(uint256 _datasetId, address _contributor) external"
-]
-
-interface WindowWithEthereum extends Window {
-  ethereum?: Eip1193Provider
-}
+import { useWeb3 } from '@/hooks/useWeb3'
+import { releasePayment } from '@/lib/blockchain'
 
 interface Submission {
   id: number
@@ -35,6 +28,7 @@ export default function SubmissionsPage({ params }: { params: Promise<{ datasetI
   const [loading, setLoading] = useState(true)
   const [payingId, setPayingId] = useState<number | null>(null)
   const supabase = createClient()
+  const { signer } = useWeb3()
 
   const fetchSubmissions = useCallback(async () => {
     const [{ data: ds }, { data: subs }] = await Promise.all([
@@ -47,43 +41,51 @@ export default function SubmissionsPage({ params }: { params: Promise<{ datasetI
   }, [supabase, datasetId])
 
   useEffect(() => {
+    let mounted = true;
     if (datasetId) {
-      fetchSubmissions()
+      const load = async () => {
+        const [{ data: ds }, { data: subs }] = await Promise.all([
+          supabase.from('datasets').select('title, reward_per_task').eq('id', datasetId).single(),
+          supabase.from('submissions').select('*, users(wallet_address)').eq('dataset_id', datasetId).order('created_at', { ascending: false })
+        ])
+        if (mounted) {
+          if (ds) setDataset(ds)
+          if (subs) setSubmissions(subs as Submission[])
+          setLoading(false)
+        }
+      }
+      void load()
     }
-  }, [fetchSubmissions, datasetId])
+    return () => { mounted = false }
+  }, [datasetId, supabase])
 
   const handleApprovePay = async (submission: Submission) => {
+    if (!signer) {
+        alert('Please connect your wallet first')
+        return
+    }
     setPayingId(submission.id)
     try {
-      const win = window as unknown as WindowWithEthereum
-      if (!win.ethereum) throw new Error('Wallet not found')
-
-      const provider = new ethers.BrowserProvider(win.ethereum)
-      const signer = await provider.getSigner()
-      const escrowAddress = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS || ''
-      const escrow = new ethers.Contract(escrowAddress, ESCROW_ABI, signer)
-
       const contributorWallet = submission.users?.wallet_address
       if (!contributorWallet) throw new Error('Contributor has no wallet address on file')
 
-      const tx = await escrow.approveWork(Number(datasetId), contributorWallet)
-      const receipt = await tx.wait()
+      const txHash = await releasePayment(signer, Number(datasetId), contributorWallet)
 
       await supabase.from('payments').insert({
         submission_id: submission.id,
         dataset_id: Number(datasetId),
         wallet_address: contributorWallet,
         amount: dataset?.reward_per_task || 0,
-        tx_hash: receipt.hash
+        tx_hash: txHash
       })
 
       await supabase.from('submissions').update({ status: 'approved' }).eq('id', submission.id)
 
-      fetchSubmissions()
-      alert(`Paid! Tx: ${receipt.hash}`)
+      void fetchSubmissions()
+      alert(`Paid! Tx: ${txHash}`)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      alert('Payment failed: ' + msg)
+      const message = err instanceof Error ? err.message : String(err)
+      alert('Payment failed: ' + message)
     } finally {
       setPayingId(null)
     }

@@ -11,7 +11,6 @@ export async function POST(req: Request) {
 
     const supabase = await createClient()
 
-    // Get submission
     const { data: submission, error: subError } = await supabase
       .from('submissions')
       .select('*, datasets(type, title)')
@@ -34,43 +33,43 @@ export async function POST(req: Request) {
         aiScore = 0
         feedback = 'Text too short. Minimum 10 characters required.'
       } else {
-        // Use GPT-4o-mini for text quality check
-        const completion = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `You are a data quality validator for the dataset: "${datasetTitle}".
-              Score the submitted text from 0-100 based on: relevance (40pts), clarity (30pts), completeness (30pts).
-              Respond ONLY with JSON: {"score": number, "feedback": "brief reason", "approved": boolean}
-              Approve if score >= 60.`
-            },
-            { role: 'user', content: textContent }
-          ],
-          response_format: { type: 'json_object' },
-          max_tokens: 150
-        })
-        const result = JSON.parse(completion.choices[0].message.content || '{}')
-        aiScore = result.score || 0
-        feedback = result.feedback || 'Validation complete.'
-        approved = result.approved || false
+        try {
+          const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: `You are a data quality validator for the dataset: "${datasetTitle}". Respond ONLY with JSON: {"score": number, "feedback": "string", "approved": boolean}`
+              },
+              { role: 'user', content: textContent }
+            ],
+            response_format: { type: 'json_object' }
+          })
+          const result = JSON.parse(completion.choices[0].message.content || '{}')
+          aiScore = result.score || 0
+          feedback = result.feedback || 'Validation complete.'
+          approved = result.approved || false
+        } catch (e) {
+          aiScore = 50
+          feedback = "Manual review required."
+          approved = false
+        }
       }
     } else if (datasetType === 'voice' || datasetType === 'image') {
       if (submission.file_url) {
         aiScore = 75
-        feedback = `${datasetType === 'voice' ? 'Audio' : 'Image'} file received and validated.`
+        feedback = `${datasetType === 'voice' ? 'Audio' : 'Image'} file validated.`
         approved = true
-      } else {
-        aiScore = 0
-        feedback = 'No file submitted.'
-        approved = false
       }
     }
 
-    const newStatus = approved ? 'approved' : 'rejected'
     await supabase
       .from('submissions')
-      .update({ ai_score: aiScore, ai_feedback: feedback, status: newStatus })
+      .update({
+        ai_score: aiScore,
+        ai_feedback: feedback,
+        status: approved ? 'approved' : submission.status
+      })
       .eq('id', submissionId)
 
     if (approved) {
@@ -79,7 +78,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ approved, score: aiScore, feedback })
   } catch (error) {
-    console.error('Validation error:', error)
     return NextResponse.json({ error: 'Validation failed' }, { status: 500 })
   }
 }
