@@ -53,6 +53,8 @@
     "har-validator": "npm:ajv@^8.17.1",
     "multibase": "npm:multiformats@^14.0.5",
     "multicodec": "npm:multiformats@^14.0.5",
-    "cids": "npm:multiformats@^14.0.5"
+    "cids": "npm:multiformats@^14.0.5",
+    "node-domexception": "npm:domexception@^4.0.0",
+    "yaeti": "npm:event-target-shim@^6.0.2"
   }
 }
