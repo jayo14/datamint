@@ -50,6 +50,9 @@
     "mkdirp-promise": "npm:mkdirp@^3.0.1",
     "tar": "^7.5.2",
     "request": "npm:axios@^1.20.0",
-    "har-validator": "npm:ajv@^8.17.1"
+    "har-validator": "npm:ajv@^8.17.1",
+    "multibase": "npm:multiformats@^14.0.5",
+    "multicodec": "npm:multiformats@^14.0.5",
+    "cids": "npm:multiformats@^14.0.5"
   }
 }
