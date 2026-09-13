@@ -3,9 +3,11 @@ import { ethers } from 'ethers'
 const ESCROW_ABI = [
   "function createDataset(uint256 _datasetId, uint256 _rewardPerTask, uint256 _totalRequired) external",
   "function fundDataset(uint256 _datasetId, uint256 _amount) external",
+  "function approveWork(uint256 _datasetId, address _contributor) external",
   "function getDatasetBalance(uint256 _datasetId) external view returns (uint256)",
   "event DatasetCreated(uint256 indexed datasetId, address indexed creator, uint256 rewardPerTask, uint256 totalRequired)",
-  "event DatasetFunded(uint256 indexed datasetId, uint256 amount)"
+  "event DatasetFunded(uint256 indexed datasetId, uint256 amount)",
+  "event PaymentReleased(uint256 indexed datasetId, address indexed contributor, uint256 amount)"
 ]
 
 const ERC20_ABI = [
@@ -53,3 +55,15 @@ export async function fundDataset(
 
   return receipt.hash
 }
+
+export async function releasePayment(
+  signer: ethers.Signer,
+  datasetId: number,
+  contributorAddress: string
+) {
+  const escrow = await getContract(signer)
+  const tx = await escrow.approveWork(datasetId, contributorAddress)
+  const receipt = await tx.wait()
+  return receipt.hash
+}
+
