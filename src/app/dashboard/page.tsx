@@ -274,13 +274,13 @@ export default function Dashboard() {
                     )}
                     {ds.status === 'active' && (
                       <>
-                        <Link href={} className="w-full">
+                        <Link href={`/dashboard/submissions/${ds.id}`} className="w-full">
                           <Button className="w-full h-12 rounded-2xl font-bold h-12 text-primary-foreground bg-primary hover:opacity-90 transition-opacity flex items-center justify-center gap-2" variant="default">
                             View Submissions
                             <ArrowUpRight className="w-4 h-4" />
                           </Button>
                         </Link>
-                        <a href={} download className="w-full">
+                        <a href={`/api/export/${ds.id}`} download className="w-full">
                           <Button variant="ghost" size="sm" className="w-full mt-2 rounded-2xl font-bold text-xs h-10">
                             Export Dataset
                           </Button>
