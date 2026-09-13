@@ -1,9 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
 
 export default async function Page() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = await createClient()
 
   // Fetching a 'todos' table, assuming it exists for testing
   const { data: todos, error } = await supabase.from('todos').select()
