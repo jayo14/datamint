@@ -43,6 +43,7 @@
   },
   "type": "module",
   "overrides": {
-    "glob": "^13.0.6"
+    "glob": "^13.0.6",
+    "inflight": "npm:lru-cache@^11.0.0"
   }
 }
