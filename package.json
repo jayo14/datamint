@@ -44,6 +44,7 @@
   "type": "module",
   "overrides": {
     "glob": "^13.0.6",
-    "inflight": "npm:lru-cache@^11.0.0"
+    "inflight": "npm:lru-cache@^11.0.0",
+    "uuid": "^11.1.0"
   }
 }
