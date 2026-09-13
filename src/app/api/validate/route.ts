@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+export const dynamic = 'force-dynamic'
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'dummy-key' })
 
 export async function POST(req: Request) {
   try {
