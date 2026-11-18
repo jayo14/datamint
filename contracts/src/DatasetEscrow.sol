@@ -334,6 +334,15 @@ contract DatasetEscrow is IDatasetEscrow, AccessControl, ReentrancyGuard, EIP712
     function refundUnallocatedFunds(bytes32 campaignId) external nonReentrant campaignExists(campaignId) onlyCreator(campaignId) returns (uint256) {
         Campaign storage campaign = _campaigns[campaignId];
 
+        if (campaign.state == CampaignState.CLOSED) {
+            revert NoRefundAvailable(campaignId);
+        }
+
+        uint256 refundable = getRefundableAmount(campaignId);
+        if (refundable == 0) {
+            revert NoRefundAvailable(campaignId);
+        }
+
         // Refund is permitted if:
         // 1. Campaign is past its claim deadline, OR
         // 2. Campaign was CANCELLED and the CANCELLATION_COOLDOWN period has elapsed.
@@ -348,11 +357,6 @@ contract DatasetEscrow is IDatasetEscrow, AccessControl, ReentrancyGuard, EIP712
                     : campaign.claimDeadline,
                 block.timestamp
             );
-        }
-
-        uint256 refundable = getRefundableAmount(campaignId);
-        if (refundable == 0) {
-            revert NoRefundAvailable(campaignId);
         }
 
         // Accounting update
