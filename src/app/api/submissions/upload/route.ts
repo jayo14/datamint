@@ -56,8 +56,9 @@ export async function POST(req: Request) {
     }).catch(console.error)
 
     return NextResponse.json({ success: true, submissionId: submission.id })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('Upload error:', error)
-    return NextResponse.json({ error: 'Internal server error: ' + error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error: ' + message }, { status: 500 })
   }
 }

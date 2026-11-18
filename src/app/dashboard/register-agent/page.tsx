@@ -43,7 +43,7 @@ export default function RegisterAgentPage() {
       const provider = new ethers.BrowserProvider(win.ethereum)
       const signer = await provider.getSigner()
       const metadataURI = "https://ogkpnvtlzsnflxzjzbus.supabase.co/storage/v1/object/public/submissions/datamint-agent.json"
-      const receipt = await registerAgent(signer, "DataMint", metadataURI)
+      await registerAgent(signer, "DataMint", metadataURI)
       const id = await getAgentId(signer)
       setAgentId(id)
       alert('Agent registered! ID: ' + id)
@@ -83,7 +83,7 @@ export default function RegisterAgentPage() {
           ) : (
             <div className="space-y-6">
               <p className="text-muted-foreground text-center text-lg leading-relaxed">
-                By registering, you link your wallet to the DataMint Agent identity on-chain. This metadata describes DataMint's capabilities for dataset creation and human-in-the-loop validation.
+                By registering, you link your wallet to the DataMint Agent identity on-chain. This metadata describes DataMint&apos;s capabilities for dataset creation and human-in-the-loop validation.
               </p>
               {error && <p className="text-red-500 text-sm font-bold text-center">Error: {error}</p>}
             </div>

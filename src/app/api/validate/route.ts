@@ -51,7 +51,7 @@ export async function POST(req: Request) {
           aiScore = result.score || 0
           feedback = result.feedback || 'Validation complete.'
           approved = result.approved || false
-        } catch (e) {
+        } catch {
           aiScore = 50
           feedback = "Manual review required."
           approved = false
@@ -80,6 +80,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ approved, score: aiScore, feedback })
   } catch (error) {
+    console.error('Validation error:', error)
     return NextResponse.json({ error: 'Validation failed' }, { status: 500 })
   }
 }
