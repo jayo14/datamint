@@ -1,6 +1,6 @@
 """Celery application configuration and periodic task schedules."""
 
-from celery import Celery
+from celery import Celery  # type: ignore[import-untyped]
 
 from app.core.config import settings
 

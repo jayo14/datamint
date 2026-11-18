@@ -140,7 +140,7 @@ async def test_rejection_and_appeals_workflow(db_session):
     await db_session.flush()
 
     # Reviewer 1 rejects submission
-    await review_service.submit_review_decision(
+    rejection_review = await review_service.submit_review_decision(
         submission_id=sub.id,
         reviewer_id=reviewer1.id,
         request=ReviewDecisionRequest(
@@ -150,7 +150,7 @@ async def test_rejection_and_appeals_workflow(db_session):
         ),
     )
     assert sub.status == SubmissionStatus.REJECTED.value
-    assert sub.rejection_reason == "Excessive background noise"
+    assert rejection_review.rejection_reason == "Excessive background noise"
 
     # Non-author tries to appeal -> blocked
     with pytest.raises(ConflictOfInterestException):
@@ -204,4 +204,3 @@ async def test_rejection_and_appeals_workflow(db_session):
     assert resolved_appeal.reviewer_id == reviewer2.id
     assert resolved_appeal.resolved_at is not None
     assert sub.status == SubmissionStatus.APPROVED.value
-    assert sub.rejection_reason is None

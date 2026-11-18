@@ -338,7 +338,7 @@ class GeminiValidationProvider:
 
 def get_ai_validation_provider(provider_name: Optional[str] = None) -> AIValidationProvider:
     """Factory creating the appropriate validation provider adapter."""
-    name = (provider_name or os.getenv("AI_VALIDATION_PROVIDER", "mock")).lower()
+    name = (provider_name or os.getenv("AI_VALIDATION_PROVIDER") or "mock").lower()
     if name == "gemini":
         return GeminiValidationProvider()
     return MockAIValidationProvider()

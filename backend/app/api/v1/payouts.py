@@ -1,7 +1,10 @@
 """EIP-712 reward vouchers and payout claim recording endpoints."""
 
+from __future__ import annotations
+
 import uuid
 from decimal import Decimal
+from typing import Any
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +18,21 @@ from app.schemas.payout import ClaimSubmissionRequest, PayoutVoucherResponse, Re
 from app.services.payout_signer import PayoutSignerService
 
 router = APIRouter(prefix="/payouts", tags=["Payouts & Vouchers"])
+
+
+def _build_voucher(payout: Any) -> RewardVoucherData:
+    """Construct an EIP-712 voucher from a payout authorization record."""
+    amount_wei = int(payout.amount * Decimal(10**18))
+    return RewardVoucherData.model_validate(
+        {
+            "campaignId": payout.onchain_campaign_id or "0x" + "0" * 64,
+            "contributor": payout.recipient_address,
+            "amount": str(amount_wei),
+            "amount_wei": amount_wei,
+            "nonce": payout.nonce or "0x" + "0" * 64,
+            "deadline": payout.deadline or int(payout.expires_at.timestamp()),
+        }
+    )
 
 
 @router.get(
@@ -37,15 +55,7 @@ async def get_or_generate_voucher(
             "Only the contributor can access their reward authorization voucher."
         )
 
-    amount_wei = int(payout.amount * Decimal(10**18))
-    voucher_data = RewardVoucherData(
-        campaign_id=payout.onchain_campaign_id or "0x" + "0" * 64,
-        contributor=payout.recipient_address,
-        amount=str(amount_wei),
-        amount_wei=amount_wei,
-        nonce=payout.nonce or "0x" + "0" * 64,
-        deadline=payout.deadline or int(payout.expires_at.timestamp()),
-    )
+    voucher_data = _build_voucher(payout)
 
     return PayoutVoucherResponse(
         id=payout.id,
@@ -84,15 +94,7 @@ async def record_claim_broadcast(
     if payout.contributor_id != current_user.id:
         raise ConflictOfInterestException("Unauthorized contributor for claim record.")
 
-    amount_wei = int(payout.amount * Decimal(10**18))
-    voucher_data = RewardVoucherData(
-        campaign_id=payout.onchain_campaign_id or "0x" + "0" * 64,
-        contributor=payout.recipient_address,
-        amount=str(amount_wei),
-        amount_wei=amount_wei,
-        nonce=payout.nonce or "0x" + "0" * 64,
-        deadline=payout.deadline or int(payout.expires_at.timestamp()),
-    )
+    voucher_data = _build_voucher(payout)
 
     return PayoutVoucherResponse(
         id=payout.id,

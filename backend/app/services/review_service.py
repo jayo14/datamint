@@ -146,10 +146,8 @@ class ReviewService:
         # Update submission status
         if request.decision == ReviewDecision.APPROVED:
             submission.status = SubmissionStatus.APPROVED.value
-            submission.rejection_reason = None
         else:
             submission.status = SubmissionStatus.REJECTED.value
-            submission.rejection_reason = request.rejection_reason
 
         await self.db.flush()
         return review
@@ -232,7 +230,6 @@ class ReviewService:
             # Overturn rejection -> submission becomes APPROVED
             appeal.status = AppealStatus.OVERTURNED.value
             submission.status = SubmissionStatus.APPROVED.value
-            submission.rejection_reason = None
         else:
             # Uphold rejection -> submission remains REJECTED
             appeal.status = AppealStatus.UPHELD.value
@@ -249,7 +246,7 @@ class ReviewService:
             review_type=ReviewType.APPEAL.value,
             decision=request.decision.value,
             notes=request.reviewer_notes,
-            rejection_reason=submission.rejection_reason
+            rejection_reason=request.reviewer_notes
             if request.decision == ReviewDecision.REJECTED
             else None,
         )
