@@ -1,16 +1,39 @@
 """DataMint FastAPI Application Entry Point."""
 
+import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.v1 import api_v1_router
 from app.core.config import settings
 from app.core.exceptions import DataMintException
 from app.core.logging import setup_logging
+
+
+class SecurityHeadersAndCorrelationMiddleware(BaseHTTPMiddleware):
+    """Middleware enforcing correlation IDs and OWASP recommended security headers."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        request.state.request_id = request_id
+
+        response = await call_next(request)
+
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if settings.ENVIRONMENT.lower() in ("production", "staging"):
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains; preload"
+            )
+        return response
 
 
 @asynccontextmanager
@@ -45,6 +68,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security Headers & Correlation ID Middleware
+app.add_middleware(SecurityHeadersAndCorrelationMiddleware)
 
 
 @app.exception_handler(DataMintException)

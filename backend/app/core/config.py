@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -56,6 +56,23 @@ class Settings(BaseSettings):
         "https://datamint.ai",
         "https://www.datamint.ai",
     ]
+
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        if self.ENVIRONMENT.lower() in ("production", "staging"):
+            if "dev-secret-key" in self.JWT_SECRET_KEY or len(self.JWT_SECRET_KEY) < 32:
+                raise ValueError(
+                    "JWT_SECRET_KEY must be a cryptographically secure key of at least 32 characters in production"
+                )
+            if self.PLATFORM_SIGNER_PRIVATE_KEY.endswith("0000000000000000000000000000000000000000000000000000000000000001"):
+                raise ValueError(
+                    "PLATFORM_SIGNER_PRIVATE_KEY cannot use default insecure key in production"
+                )
+            if self.ESCROW_CONTRACT_ADDRESS == "0x0000000000000000000000000000000000000000":
+                raise ValueError(
+                    "ESCROW_CONTRACT_ADDRESS must be set to deployed escrow address in production"
+                )
+        return self
 
 
 settings = Settings()

@@ -168,3 +168,41 @@ async def test_reviewer_self_approval_conflict_of_interest(async_client: AsyncCl
     )
     assert resp_decide.status_code == 403
     assert "cannot evaluate their own submissions" in resp_decide.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_security_headers_and_correlation_id(async_client: AsyncClient):
+    """Verify presence of OWASP security headers and X-Request-ID propagation."""
+    custom_request_id = "test-corr-id-12345"
+    resp = await async_client.get("/api/v1/health/healthz", headers={"X-Request-ID": custom_request_id})
+    assert resp.status_code == 200
+    assert resp.headers.get("X-Request-ID") == custom_request_id
+    assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+    assert resp.headers.get("X-Frame-Options") == "DENY"
+    assert resp.headers.get("X-XSS-Protection") == "1; mode=block"
+    assert resp.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+
+
+def test_production_config_validation():
+    """Verify that Settings rejects insecure default secrets when ENVIRONMENT is production."""
+    from app.core.config import Settings
+    import pytest
+
+    # Should raise error when ENVIRONMENT is production and default JWT secret is used
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY"):
+        Settings(
+            ENVIRONMENT="production",
+            JWT_SECRET_KEY="dev-secret-key-change-in-production-datamint-celo-ai",
+            PLATFORM_SIGNER_PRIVATE_KEY="0x" + "a" * 64,
+            ESCROW_CONTRACT_ADDRESS="0x1234567890123456789012345678901234567890",
+        )
+
+    # Should raise error when PLATFORM_SIGNER_PRIVATE_KEY is default 0x01
+    with pytest.raises(ValueError, match="PLATFORM_SIGNER_PRIVATE_KEY"):
+        Settings(
+            ENVIRONMENT="production",
+            JWT_SECRET_KEY="a" * 32,
+            PLATFORM_SIGNER_PRIVATE_KEY="0x0000000000000000000000000000000000000000000000000000000000000001",
+            ESCROW_CONTRACT_ADDRESS="0x1234567890123456789012345678901234567890",
+        )
+
