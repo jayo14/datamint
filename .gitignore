@@ -43,3 +43,18 @@ next-env.d.ts
 # hardhat
 contracts/cache/
 contracts/artifacts/build-info/
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/.venv/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+.env
