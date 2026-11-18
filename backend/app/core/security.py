@@ -1,21 +1,35 @@
-"""Cryptographic security, JWT tokens, and Ethereum/Celo signature verification."""
+"""Cryptographic security, password hashing, JWT tokens, and Ethereum/Celo signature verification."""
 
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
-
+import bcrypt
 import jwt
 from eth_account import Account
 from eth_account.messages import encode_defunct
-
 from app.core.config import settings
 from app.core.exceptions import InvalidSignatureException
 
 
+def hash_password(password: str) -> str:
+    """Hash plaintext password using bcrypt."""
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify plaintext password against bcrypt hash."""
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception:
+        return False
+
+
 def create_access_token(
     subject: str,
-    wallet_address: str,
     capabilities: List[str],
+    wallet_address: Optional[str] = None,
     expires_delta: Optional[timedelta] = None,
 ) -> str:
     """Generate signed JWT access token."""
@@ -27,7 +41,7 @@ def create_access_token(
 
     to_encode: Dict[str, Any] = {
         "sub": subject,
-        "wallet": wallet_address.lower(),
+        "wallet": wallet_address.lower() if wallet_address else None,
         "capabilities": capabilities,
         "iat": now.timestamp(),
         "exp": expire.timestamp(),
