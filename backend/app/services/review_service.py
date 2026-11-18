@@ -1,7 +1,7 @@
 """Human review and appeals workflow management service."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
 from sqlalchemy import func, select
@@ -15,6 +15,7 @@ from app.core.exceptions import (
     InvalidStateTransitionException,
 )
 from app.models.enums import AppealStatus, ReviewDecision, ReviewType, SubmissionStatus
+from app.models.notification import Notification
 from app.models.submission import Appeal, Review, Submission, ValidationRun
 from app.schemas.review import (
     AppealCreateRequest,
@@ -112,7 +113,11 @@ class ReviewService:
         request: ReviewDecisionRequest,
     ) -> Review:
         """Submit a reviewer evaluation on a submission pending review."""
-        query = select(Submission).where(Submission.id == submission_id)
+        query = (
+            select(Submission)
+            .where(Submission.id == submission_id)
+            .options(selectinload(Submission.campaign))
+        )
         submission = (await self.db.execute(query)).scalar_one_or_none()
         if not submission:
             raise EntityNotFoundException("Submission", submission_id)
@@ -146,8 +151,26 @@ class ReviewService:
         # Update submission status
         if request.decision == ReviewDecision.APPROVED:
             submission.status = SubmissionStatus.APPROVED.value
+            event_type = "SUBMISSION_APPROVED"
         else:
             submission.status = SubmissionStatus.REJECTED.value
+            event_type = "SUBMISSION_REJECTED"
+
+        # Emit in-app notification to contributor
+        campaign_title = submission.campaign.title if submission.campaign else "campaign"
+        notif = Notification(
+            user_id=submission.contributor_id,
+            event_type=event_type,
+            title=f"Submission {request.decision.value}",
+            message=f"Your submission for {campaign_title} has been evaluated by a reviewer: {request.decision.value}.",
+            data_json={
+                "submission_id": str(submission.id),
+                "decision": request.decision.value,
+                "notes": request.notes,
+                "rejection_reason": request.rejection_reason,
+            },
+        )
+        self.db.add(notif)
 
         await self.db.flush()
         return review
@@ -159,7 +182,11 @@ class ReviewService:
         request: AppealCreateRequest,
     ) -> Appeal:
         """Allow contributor to appeal an unfair or inaccurate rejection."""
-        query = select(Submission).where(Submission.id == submission_id)
+        query = (
+            select(Submission)
+            .where(Submission.id == submission_id)
+            .options(selectinload(Submission.campaign))
+        )
         submission = (await self.db.execute(query)).scalar_one_or_none()
         if not submission:
             raise EntityNotFoundException("Submission", submission_id)
@@ -173,6 +200,31 @@ class ReviewService:
             raise DomainRuleViolationException(
                 f"Cannot appeal a submission with status '{submission.status}'. Only REJECTED submissions can be appealed."
             )
+
+        # Enforce campaign-specific appeal deadlines
+        campaign = submission.campaign
+        if campaign:
+            now_utc = datetime.now(timezone.utc)
+            if campaign.deadline:
+                camp_deadline = campaign.deadline
+                if camp_deadline.tzinfo is None:
+                    camp_deadline = camp_deadline.replace(tzinfo=timezone.utc)
+                if now_utc > camp_deadline:
+                    raise DomainRuleViolationException(
+                        "The campaign deadline has passed; appeals are no longer accepted."
+                    )
+
+            criteria = campaign.eligibility_criteria or {}
+            appeal_window_days = int(criteria.get("appeal_window_days", 7))
+            ref_time = submission.updated_at or submission.created_at
+            if ref_time:
+                if ref_time.tzinfo is None:
+                    ref_time = ref_time.replace(tzinfo=timezone.utc)
+                cutoff = ref_time + timedelta(days=appeal_window_days)
+                if now_utc > cutoff:
+                    raise DomainRuleViolationException(
+                        f"The appeal deadline of {appeal_window_days} days for this rejection has passed."
+                    )
 
         # Prevent duplicate pending appeals
         existing_appeal_query = select(Appeal).where(
@@ -195,6 +247,20 @@ class ReviewService:
         self.db.add(appeal)
 
         submission.status = SubmissionStatus.UNDER_APPEAL.value
+
+        # Queue notification for appeal submission
+        notif = Notification(
+            user_id=contributor_id,
+            event_type="APPEAL_SUBMITTED",
+            title="Appeal Submitted",
+            message=f"Your appeal for submission {submission.id} has been received and queued for review.",
+            data_json={
+                "submission_id": str(submission.id),
+                "reason": request.reason,
+            },
+        )
+        self.db.add(notif)
+
         await self.db.flush()
         return appeal
 
@@ -206,7 +272,11 @@ class ReviewService:
     ) -> Appeal:
         """Resolve a contributor appeal by upholding or overturning the rejection."""
         query = (
-            select(Appeal).where(Appeal.id == appeal_id).options(selectinload(Appeal.submission))
+            select(Appeal)
+            .where(Appeal.id == appeal_id)
+            .options(
+                selectinload(Appeal.submission).selectinload(Submission.campaign)
+            )
         )
         appeal = (await self.db.execute(query)).scalar_one_or_none()
         if not appeal:
@@ -251,6 +321,21 @@ class ReviewService:
             else None,
         )
         self.db.add(review)
+
+        # Emit in-app notification to contributor
+        notif = Notification(
+            user_id=appeal.contributor_id,
+            event_type="APPEAL_RESOLVED",
+            title=f"Appeal {appeal.status}",
+            message=f"Your appeal for submission {submission.id} has been resolved: {appeal.status}.",
+            data_json={
+                "submission_id": str(submission.id),
+                "appeal_id": str(appeal.id),
+                "status": appeal.status,
+                "notes": request.reviewer_notes,
+            },
+        )
+        self.db.add(notif)
 
         await self.db.flush()
         return appeal
