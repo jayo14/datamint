@@ -212,6 +212,10 @@ async def execute_dispatch_outbox_notifications(batch_size: int = 50) -> dict:
             dispatched_count = 0
 
             for ev in events:
+                if ev.topic == "submission.submitted":
+                    sub_id_str = ev.payload.get("submission_id")
+                    if sub_id_str:
+                        task_run_ai_validation.delay(sub_id_str)
                 ev.status = OutboxStatus.PUBLISHED.value
                 dispatched_count += 1
 

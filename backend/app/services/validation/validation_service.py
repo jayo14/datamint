@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import EntityNotFoundException
 from app.models.enums import SubmissionStatus, ValidationOutcome, ValidationStatus
+from app.models.notification import Notification
 from app.models.submission import Submission, SubmissionAsset, ValidationFinding, ValidationRun
 from app.services.storage_service import storage_provider
 from app.services.validation.base import AIValidationProvider
@@ -187,12 +188,48 @@ class ValidationService:
             self.db.add(finding)
 
         # 5. Transition submission status according to policy outcome
+        campaign_title = campaign.title if campaign else "campaign"
         if outcome == ValidationOutcome.APPROVED:
             submission.status = SubmissionStatus.APPROVED.value
+            decision_event = "SUBMISSION_APPROVED"
+            notif_msg = f"Your submission for '{campaign_title}' passed AI validation with confidence {score:.2f}."
         elif outcome == ValidationOutcome.REJECTED:
             submission.status = SubmissionStatus.REJECTED.value
+            decision_event = "SUBMISSION_REJECTED"
+            notif_msg = f"Your submission for '{campaign_title}' was rejected by AI validation: {rationale}."
         else:
             submission.status = SubmissionStatus.NEEDS_REVIEW.value
+            decision_event = "HUMAN_REVIEW_REQUIRED"
+            notif_msg = f"Your submission for '{campaign_title}' has been routed for human review: {rationale}."
+
+        # Emit outcome-specific notification
+        notif_decision = Notification(
+            user_id=submission.contributor_id,
+            event_type=decision_event,
+            title=f"Submission {outcome.value}",
+            message=notif_msg,
+            data_json={
+                "submission_id": str(submission.id),
+                "outcome": outcome.value,
+                "score": str(score),
+                "rationale": rationale,
+            },
+        )
+        self.db.add(notif_decision)
+
+        # Emit general VALIDATION_COMPLETED notification
+        notif_completed = Notification(
+            user_id=submission.contributor_id,
+            event_type="VALIDATION_COMPLETED",
+            title="Validation Completed",
+            message=f"Validation completed for '{campaign_title}': {outcome.value}.",
+            data_json={
+                "submission_id": str(submission.id),
+                "outcome": outcome.value,
+                "score": str(score),
+            },
+        )
+        self.db.add(notif_completed)
 
         await self.db.flush()
 

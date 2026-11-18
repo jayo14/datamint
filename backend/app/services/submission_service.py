@@ -24,6 +24,7 @@ from app.models.enums import (
     ValidationStatus,
 )
 from app.models.financial import PayoutAuthorization
+from app.models.notification import Notification, OutboxEvent
 from app.models.submission import Submission, SubmissionAsset, ValidationFinding, ValidationRun
 from app.models.wallet import Wallet
 from app.schemas.submission import (
@@ -362,6 +363,39 @@ class SubmissionService:
         campaign.current_submissions += 1
         if campaign.current_submissions >= campaign.target_submissions:
             campaign.status = CampaignStatus.COMPLETED.value
+
+        campaign_title = campaign.title if campaign else "campaign"
+
+        # Emit in-app notification to contributor
+        notif = Notification(
+            user_id=contributor_id,
+            event_type="SUBMISSION_RECEIVED",
+            title="Submission Received",
+            message=f"Your submission for '{campaign_title}' has been received and queued for validation.",
+            data_json={
+                "submission_id": str(submission.id),
+                "campaign_id": str(campaign.id),
+            },
+        )
+        self.db.add(notif)
+
+        # Enqueue transactional outbox event for asynchronous AI validation
+        outbox = OutboxEvent(
+            topic="submission.submitted",
+            payload={"submission_id": str(submission.id)},
+        )
+        self.db.add(outbox)
+
+        # If campaign reached capacity, notify creator
+        if campaign.status == CampaignStatus.COMPLETED.value:
+            creator_notif = Notification(
+                user_id=campaign.creator_id,
+                event_type="CAMPAIGN_COMPLETED",
+                title="Campaign Target Capacity Reached",
+                message=f"Campaign '{campaign_title}' has collected all {campaign.target_submissions} target submissions.",
+                data_json={"campaign_id": str(campaign.id)},
+            )
+            self.db.add(creator_notif)
 
         await self.db.flush()
         return submission

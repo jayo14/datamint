@@ -24,6 +24,7 @@ from app.core.exceptions import (
 from app.models.campaign import DatasetCampaign
 from app.models.enums import CampaignStatus, PayoutStatus, SubmissionStatus
 from app.models.financial import PayoutAuthorization
+from app.models.notification import Notification
 from app.models.submission import Submission
 from app.models.wallet import Wallet
 from app.services.ledger_service import LedgerService
@@ -255,6 +256,21 @@ class PayoutSignerService:
                 expires_at=expires_at,
             )
             self.db.add(payout_record)
+
+        # Emit REWARD_AUTHORIZED in-app notification
+        notif = Notification(
+            user_id=submission.contributor_id,
+            event_type="REWARD_AUTHORIZED",
+            title="Reward Voucher Authorized",
+            message=f"Reward of {reward_cusd} cUSD has been authorized via EIP-712 voucher. Ready for withdrawal.",
+            data_json={
+                "submission_id": str(submission.id),
+                "amount": str(reward_cusd),
+                "nonce": nonce_hex,
+                "deadline": deadline_timestamp,
+            },
+        )
+        self.db.add(notif)
 
         await self.db.flush()
         return payout_record
