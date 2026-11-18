@@ -2,9 +2,9 @@
 
 **Document Version:** 1.0.0  
 **Target Contracts:** `DatasetEscrow.sol` (Foundry / Mainnet target), `DataMintEscrow.sol` (Hardhat)  
-**Compiler:** Solidity `^0.8.20` (EVM target: `shanghai` / `paris`)  
-**Network:** Celo Alfajores Testnet (Chain ID: 44787), Celo Mainnet (Chain ID: 42220)  
-**Token Standard:** ERC-20 (cUSD: `0x765DE816845861e75A25fCA122bb6898B8B1282a` Mainnet, `0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1` Alfajores)  
+**Compiler:** Solidity `0.8.24` (EVM target: `cancun`)  
+**Network:** Celo Sepolia Testnet (Chain ID: 11142220), Celo Mainnet (Chain ID: 42220)  
+**Token Standard:** ERC-20 (cUSD: `0x765DE816845861e75A25fCA122bb6898B8B1282a` Mainnet, `0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1` Sepolia Testnet)  
 **Classification:** PRODUCTION AUDIT COMPLETE — VERIFIED SAFE FOR DEPLOYMENT  
 
 ---
@@ -73,7 +73,7 @@ This audit evaluates the codebase against top smart contract vulnerabilities, fo
 
 ### 3.4 Signature Malleability and Replay Protection
 - **Protection:**
-  1. **EIP-712 Typed Structured Data:** Signatures commit to domain separator containing `name`, `version ("1")`, `chainId`, and `verifyingContract`. A voucher issued for Alfajores cannot be replayed on Mainnet or across distinct contract deployments.
+  1. **EIP-712 Typed Structured Data:** Signatures commit to domain separator containing `name`, `version ("1")`, `chainId`, and `verifyingContract`. A voucher issued for Celo Sepolia (11142220) cannot be replayed on Mainnet or across distinct contract deployments.
   2. **ECDSA Malleability Guard:** OpenZeppelin `ECDSA.recover` strictly enforces valid `s` range (`0 < s < secp256k1n / 2`) and valid `v` values (`27` or `28`), eliminating signature malleability.
   3. **Voucher & Nonce Deduplication:** `_executedVouchers[voucherHash]` and `_usedNonces[voucher.nonce]` ensure that every signature can be executed exactly once. Subsequent attempts revert with `VoucherAlreadyUsed()`.
   4. **Deadline Enforcement:** Signatures expire at `voucher.deadline`. Expired vouchers revert with `VoucherExpired()`.

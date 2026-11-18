@@ -208,19 +208,21 @@ Detailed runbooks available in `docs/operations/`:
 
 ---
 
-## 19. Mainnet Deployment and Rollout Plan
+## 19. Pre-Mainnet Validation and Mainnet Rollout Plan
 
-1. **Phase 6.1: Testnet Staging Verification (Celo Alfajores):**
-   - Deploy `DatasetEscrow.sol` to Alfajores.
+Detailed gating specification available in `docs/deployment/pre-mainnet-validation-plan.md`.
+
+1. **Pre-Mainnet Phase 1: Testnet Staging Verification (Celo Sepolia - Chain ID 11142220):**
+   - Deploy `DatasetEscrow.sol` to Celo Sepolia testnet.
    - Run end-to-end user journeys (Campaign Creation $\to$ Multi-modal Submission $\to$ AI Validation $\to$ Human Review $\to$ Voucher Issuance $\to$ On-chain Claim).
-2. **Phase 6.2: Production Key Provisioning & HSM Setup:**
-   - Generate production platform signer address via AWS KMS / Azure Key Vault HSM.
-   - Deploy production PostgreSQL 16 cluster with multi-AZ replication.
-3. **Phase 6.3: Mainnet Contract Deployment:**
+2. **Pre-Mainnet Phase 2: Production Key Provisioning & HSM Setup:**
+   - Provision production platform voucher signer via AWS KMS (secp256k1) with DER-to-EVM (r, s, v) conversion.
+   - Deploy production PostgreSQL 16 cluster with continuous WAL streaming and PITR drill (< 5 min RPO).
+3. **Phase 3: Controlled Mainnet Contract Deployment:**
    - Deploy `DatasetEscrow.sol` to Celo Mainnet (`0x765DE816845861e75A25fCA122bb6898B8B1282a` cUSD).
    - Set platform signer to production KMS address.
-   - Transfer contract ownership to Gnosis Safe 3-of-5 multisig.
-4. **Phase 6.4: Controlled Public Launch:**
+   - Transfer contract ownership to Gnosis Safe 3-of-5 multisig after testing threshold and recovery.
+4. **Phase 4: Controlled Public Launch:**
    - Launch with initial campaign cap ($5,000 per campaign) for the first 14 days.
    - Monitor hourly reconciliation logs and indexer performance.
 
