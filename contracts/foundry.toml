@@ -22,3 +22,8 @@ celo_sepolia = "https://forno.celo-sepolia.celo-testnet.org"
 [etherscan]
 celo = { key = "${CELOSCAN_API_KEY}", url = "https://api.celoscan.io/api" }
 celo_sepolia = { key = "${CELOSCAN_API_KEY}", url = "https://api-sepolia.celoscan.io/api" }
+
+[invariant]
+runs = 64
+depth = 15
+fail_on_revert = false
