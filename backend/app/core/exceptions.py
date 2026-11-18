@@ -72,3 +72,21 @@ class InvalidSignatureException(DataMintException):
             detail=detail,
             code="INVALID_SIGNATURE",
         )
+
+
+class DomainRuleViolationException(DataMintException):
+    def __init__(self, detail: str = "Domain rule violation"):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail,
+            code="DOMAIN_RULE_VIOLATION",
+        )
+
+
+class ConflictOfInterestException(DataMintException):
+    def __init__(self, detail: str = "Conflict of interest detected"):
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=detail,
+            code="CONFLICT_OF_INTEREST",
+        )
