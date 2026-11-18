@@ -1,14 +1,23 @@
-"""Submission and validation schemas."""
+"""Submission and asset lifecycle schemas."""
 
 import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
-
 from pydantic import Field
-
 from app.models.enums import AssetType, SubmissionStatus, ValidationStatus
 from app.schemas.common import BaseSchema
+
+
+class SubmissionDraftCreate(BaseSchema):
+    campaign_id: uuid.UUID
+    draft_data: Optional[dict] = None
+    metadata_json: Optional[dict] = None
+
+
+class SubmissionDraftUpdate(BaseSchema):
+    draft_data: Optional[dict] = None
+    metadata_json: Optional[dict] = None
 
 
 class SubmissionCreate(BaseSchema):
@@ -34,6 +43,8 @@ class AssetResponse(BaseSchema):
     byte_size: int
     mime_type: str
     checksum_sha256: Optional[str] = None
+    is_uploaded: bool
+    uploaded_at: Optional[datetime] = None
     created_at: datetime
 
 
@@ -59,6 +70,9 @@ class SubmissionResponse(BaseSchema):
     contributor_id: uuid.UUID
     status: SubmissionStatus
     attempt_number: int
+    draft_data: Optional[dict] = None
+    metadata_json: Optional[dict] = None
+    submitted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     assets: List[AssetResponse] = []

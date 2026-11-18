@@ -3,10 +3,8 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
-
+from typing import List, Optional
 from pydantic import Field, field_validator
-
 from app.models.enums import CampaignStatus, DataType
 from app.schemas.common import BaseSchema
 
@@ -31,6 +29,10 @@ class CampaignCreate(BaseSchema):
     target_submissions: int = Field(..., gt=0)
     reward_per_submission: Decimal = Field(..., gt=Decimal("0.0"))
     reward_currency: str = Field(default="cUSD")
+    category: Optional[str] = Field(default=None, max_length=100)
+    tags: Optional[List[str]] = None
+    instructions: Optional[str] = None
+    eligibility_criteria: Optional[dict] = None
     deadline: Optional[datetime] = None
     requirements: Optional[CampaignRequirementCreate] = None
 
@@ -40,6 +42,20 @@ class CampaignCreate(BaseSchema):
         if v <= 0:
             raise ValueError("Reward per submission must be greater than 0")
         return v
+
+
+class CampaignUpdateDraft(BaseSchema):
+    title: Optional[str] = Field(default=None, min_length=5, max_length=200)
+    description: Optional[str] = Field(default=None, min_length=10)
+    data_type: Optional[DataType] = None
+    target_submissions: Optional[int] = Field(default=None, gt=0)
+    reward_per_submission: Optional[Decimal] = Field(default=None, gt=Decimal("0.0"))
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    instructions: Optional[str] = None
+    eligibility_criteria: Optional[dict] = None
+    deadline: Optional[datetime] = None
+    requirements: Optional[CampaignRequirementCreate] = None
 
 
 class EscrowSummaryResponse(BaseSchema):
@@ -62,8 +78,24 @@ class CampaignResponse(BaseSchema):
     current_submissions: int
     reward_per_submission: Decimal
     reward_currency: str
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    instructions: Optional[str] = None
+    eligibility_criteria: Optional[dict] = None
     deadline: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     requirements: Optional[CampaignRequirementResponse] = None
     escrow: Optional[EscrowSummaryResponse] = None
+
+
+class FundingParametersResponse(BaseSchema):
+    campaign_id: uuid.UUID
+    onchain_campaign_id: str
+    reward_per_submission_wei: str
+    target_submissions: int
+    required_budget_wei: str
+    required_budget_formatted: str
+    reward_currency: str
+    contract_address: str
+    metadata_hash: str
