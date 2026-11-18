@@ -3,7 +3,8 @@
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
+
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
@@ -14,13 +15,19 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.database import Base
 from app.models.enums import LedgerEntryType, PayoutStatus
 from app.models.identity import JsonType, UuidType
 
+if TYPE_CHECKING:
+    from app.models.campaign import DatasetCampaign
+    from app.models.submission import Submission
+
 
 class EscrowCampaign(Base):
     """Campaign escrow ledger summary enforcing non-negative balances and the financial invariant."""
+
     __tablename__ = "escrow_campaigns"
     __table_args__ = (
         CheckConstraint("total_funded >= 0", name="chk_escrow_funded_non_negative"),
@@ -86,6 +93,7 @@ class EscrowCampaign(Base):
 
 class LedgerEntry(Base):
     """Immutable double-entry journal entry for campaign escrow."""
+
     __tablename__ = "ledger_entries"
     __table_args__ = (
         CheckConstraint("amount > 0", name="chk_ledger_amount_positive"),
@@ -121,11 +129,14 @@ class LedgerEntry(Base):
         nullable=False,
     )
 
-    escrow: Mapped["EscrowCampaign"] = relationship("EscrowCampaign", back_populates="ledger_entries")
+    escrow: Mapped["EscrowCampaign"] = relationship(
+        "EscrowCampaign", back_populates="ledger_entries"
+    )
 
 
 class PayoutAuthorization(Base):
     """Signed EIP-712 payout authorization voucher."""
+
     __tablename__ = "payout_authorizations"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -169,6 +180,7 @@ class PayoutAuthorization(Base):
 
 class IdempotencyRecord(Base):
     """Global deduplication table for API requests and blockchain events."""
+
     __tablename__ = "idempotency_records"
 
     id: Mapped[uuid.UUID] = mapped_column(

@@ -3,9 +3,11 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+
 import jwt
-from eth_account.messages import encode_defunct
 from eth_account import Account
+from eth_account.messages import encode_defunct
+
 from app.core.config import settings
 from app.core.exceptions import InvalidSignatureException
 
@@ -74,6 +76,6 @@ def recover_signer_address(message: str, signature: str) -> str:
     try:
         signable_message = encode_defunct(text=message)
         recovered_address = Account.recover_message(signable_message, signature=signature)
-        return recovered_address.lower()
+        return str(recovered_address).lower()
     except Exception as e:
         raise InvalidSignatureException(detail=f"Signature recovery failed: {str(e)}")

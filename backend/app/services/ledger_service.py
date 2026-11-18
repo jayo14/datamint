@@ -3,8 +3,10 @@
 import uuid
 from decimal import Decimal
 from typing import Optional
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.exceptions import (
     EntityNotFoundException,
     FinancialInvariantViolationException,

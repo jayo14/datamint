@@ -2,11 +2,16 @@
 
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.database import Base
 from app.models.identity import UuidType
+
+if TYPE_CHECKING:
+    from app.models.identity import User
 
 
 class Wallet(Base):
@@ -38,6 +43,7 @@ class Wallet(Base):
 
 class WalletNonceChallenge(Base):
     """Temporary nonce challenge for EIP-4361 authentication."""
+
     __tablename__ = "wallet_nonce_challenges"
 
     id: Mapped[uuid.UUID] = mapped_column(

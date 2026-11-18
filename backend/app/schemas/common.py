@@ -1,6 +1,7 @@
 """Common Pydantic v2 schemas and response models."""
 
 from typing import Generic, List, Optional, TypeVar
+
 from pydantic import BaseModel, ConfigDict
 
 T = TypeVar("T")

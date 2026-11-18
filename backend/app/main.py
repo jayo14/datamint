@@ -2,9 +2,11 @@
 
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-from fastapi import FastAPI, Request, status
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
 from app.api.v1 import api_v1_router
 from app.core.config import settings
 from app.core.exceptions import DataMintException
@@ -21,15 +23,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    description="""
-    DataMint is a decentralized AI dataset marketplace powered by human contributors and Celo payments.
-    
-    ### Core Features:
-    * **Decentralized SIWE (EIP-4361)** wallet authentication
-    * **Dual-capability identity** (contributor + creator in one account)
-    * **Double-entry financial ledger** enforcing the invariant `Funded = Claimed + Reserved + Available + Refunded`
-    * **Non-custodial EIP-712 pull-payment vouchers** for instant cUSD claim on Celo
-    """,
+    description=(
+        "DataMint is a decentralized AI dataset marketplace powered by human contributors and Celo payments.\n\n"
+        "### Core Features:\n"
+        "* **Decentralized SIWE (EIP-4361)** wallet authentication\n"
+        "* **Dual-capability identity** (contributor + creator in one account)\n"
+        "* **Double-entry financial ledger** enforcing the invariant Funded = Claimed + Reserved + Available + Refunded\n"
+        "* **Non-custodial EIP-712 pull-payment vouchers** for instant cUSD claim on Celo\n"
+    ),
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",

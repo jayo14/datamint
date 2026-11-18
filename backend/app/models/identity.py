@@ -2,18 +2,25 @@
 
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.types import JSON
+from sqlalchemy.types import JSON, Uuid
+
 from app.core.database import Base
 from app.models.enums import CapabilityType
 
+if TYPE_CHECKING:
+    from app.models.campaign import DatasetCampaign
+    from app.models.submission import Submission
+    from app.models.wallet import Wallet
 
-# Cross-dialect JSON type that works on both PostgreSQL (JSONB) and SQLite (JSON)
+# Cross-dialect JSON and UUID types that work on both PostgreSQL and SQLite
 JsonType = JSONB().with_variant(JSON(), "sqlite")
-UuidType = UUID(as_uuid=True).with_variant(String(36), "sqlite")
+UuidType = PG_UUID(as_uuid=True).with_variant(Uuid(as_uuid=True), "sqlite")
 
 
 class User(Base):
@@ -24,7 +31,9 @@ class User(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
-    email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True, index=True)
+    email: Mapped[Optional[str]] = mapped_column(
+        String(255), unique=True, nullable=True, index=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -86,10 +95,9 @@ class UserProfile(Base):
 
 class UserCapability(Base):
     """Decoupled capability mapping enabling a single user to act as creator and contributor."""
+
     __tablename__ = "user_capabilities"
-    __table_args__ = (
-        UniqueConstraint("user_id", "capability_type", name="uq_user_capability"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "capability_type", name="uq_user_capability"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UuidType,

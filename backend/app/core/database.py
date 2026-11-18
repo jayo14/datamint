@@ -1,22 +1,25 @@
 """Async SQLAlchemy 2.0 database engine, session factory, and base model."""
 
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
+
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+
 from app.core.config import settings
 
 
 class Base(DeclarativeBase):
     """Base declarative class for all SQLAlchemy 2.0 models."""
+
     pass
 
 
 # Connect engine
-engine_kwargs = {"echo": settings.DEBUG}
+engine_kwargs: dict[str, Any] = {"echo": settings.DEBUG}
 if "sqlite" not in settings.DATABASE_URL:
     engine_kwargs.update(
         {

@@ -1,5 +1,9 @@
 """SQLAlchemy models registry."""
 
+from app.models.campaign import (
+    CampaignRequirement,
+    DatasetCampaign,
+)
 from app.models.enums import (
     AssetType,
     CampaignStatus,
@@ -22,20 +26,16 @@ from app.models.identity import (
     UserCapability,
     UserProfile,
 )
-from app.models.wallet import (
-    Wallet,
-    WalletNonceChallenge,
-)
-from app.models.campaign import (
-    CampaignRequirement,
-    DatasetCampaign,
-)
 from app.models.submission import (
     Review,
     Submission,
     SubmissionAsset,
     ValidationFinding,
     ValidationRun,
+)
+from app.models.wallet import (
+    Wallet,
+    WalletNonceChallenge,
 )
 
 __all__ = [

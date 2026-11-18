@@ -3,7 +3,8 @@
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
+
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
@@ -15,9 +16,15 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.database import Base
 from app.models.enums import CampaignStatus, DataType
 from app.models.identity import JsonType, UuidType
+
+if TYPE_CHECKING:
+    from app.models.financial import EscrowCampaign
+    from app.models.identity import User
+    from app.models.submission import Submission
 
 
 class DatasetCampaign(Base):
@@ -88,9 +95,7 @@ class DatasetCampaign(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
-    submissions: Mapped[List["Submission"]] = relationship(
-        "Submission", back_populates="campaign"
-    )
+    submissions: Mapped[List["Submission"]] = relationship("Submission", back_populates="campaign")
 
 
 class CampaignRequirement(Base):
@@ -113,4 +118,6 @@ class CampaignRequirement(Base):
     instructions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     criteria_metadata: Mapped[Optional[dict]] = mapped_column(JsonType, nullable=True)
 
-    campaign: Mapped["DatasetCampaign"] = relationship("DatasetCampaign", back_populates="requirements")
+    campaign: Mapped["DatasetCampaign"] = relationship(
+        "DatasetCampaign", back_populates="requirements"
+    )

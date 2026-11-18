@@ -1,8 +1,10 @@
 """Submission upload and validation endpoints."""
 
 import uuid
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import require_capability
 from app.core.database import get_db
 from app.models.enums import CapabilityType
@@ -30,7 +32,9 @@ async def initialize_submission(
     return init_res
 
 
-@router.post("/{submission_id}/complete", response_model=SubmissionResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/{submission_id}/complete", response_model=SubmissionResponse, status_code=status.HTTP_200_OK
+)
 async def complete_submission_upload(
     submission_id: uuid.UUID,
     current_user: User = Depends(require_capability(CapabilityType.CONTRIBUTOR)),

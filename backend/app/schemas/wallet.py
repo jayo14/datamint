@@ -2,7 +2,9 @@
 
 import uuid
 from datetime import datetime
+
 from pydantic import Field
+
 from app.schemas.common import BaseSchema
 
 
@@ -15,5 +17,7 @@ class WalletResponse(BaseSchema):
 
 
 class ConnectWalletRequest(BaseSchema):
-    message: str = Field(..., description="EIP-4361 message verifying ownership of the additional wallet")
+    message: str = Field(
+        ..., description="EIP-4361 message verifying ownership of the additional wallet"
+    )
     signature: str = Field(..., description="Cryptographic signature")

@@ -3,7 +3,8 @@
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
+
 from sqlalchemy import (
     BigInteger,
     DateTime,
@@ -15,9 +16,15 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.database import Base
 from app.models.enums import AssetType, SubmissionStatus, ValidationStatus
 from app.models.identity import JsonType, UuidType
+
+if TYPE_CHECKING:
+    from app.models.campaign import DatasetCampaign
+    from app.models.financial import PayoutAuthorization
+    from app.models.identity import User
 
 
 class Submission(Base):
@@ -63,7 +70,9 @@ class Submission(Base):
     )
 
     # Relationships
-    campaign: Mapped["DatasetCampaign"] = relationship("DatasetCampaign", back_populates="submissions")
+    campaign: Mapped["DatasetCampaign"] = relationship(
+        "DatasetCampaign", back_populates="submissions"
+    )
     contributor: Mapped["User"] = relationship("User", back_populates="submissions")
     assets: Mapped[List["SubmissionAsset"]] = relationship(
         "SubmissionAsset", back_populates="submission", cascade="all, delete-orphan"
@@ -168,7 +177,9 @@ class ValidationFinding(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     details: Mapped[Optional[dict]] = mapped_column(JsonType, nullable=True)
 
-    validation_run: Mapped["ValidationRun"] = relationship("ValidationRun", back_populates="findings")
+    validation_run: Mapped["ValidationRun"] = relationship(
+        "ValidationRun", back_populates="findings"
+    )
 
 
 class Review(Base):

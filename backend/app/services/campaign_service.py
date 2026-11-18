@@ -3,9 +3,11 @@
 import uuid
 from decimal import Decimal
 from typing import List, Optional, Tuple
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.core.exceptions import (
     EntityNotFoundException,
     InvalidStateTransitionException,
@@ -20,9 +22,7 @@ class CampaignService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_campaign(
-        self, creator_id: uuid.UUID, data: CampaignCreate
-    ) -> DatasetCampaign:
+    async def create_campaign(self, creator_id: uuid.UUID, data: CampaignCreate) -> DatasetCampaign:
         """Create a new dataset campaign in DRAFT state with requirements and escrow summary initialized."""
         campaign = DatasetCampaign(
             creator_id=creator_id,

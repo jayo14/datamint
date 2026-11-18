@@ -4,10 +4,12 @@ import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Optional, Tuple
+from typing import Tuple
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.core.exceptions import (
     DataMintException,
     EntityNotFoundException,
@@ -76,7 +78,9 @@ class SubmissionService:
 
         # In production this generates an S3 pre-signed PUT URL. Here we return the endpoint path.
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
-        upload_url = f"https://storage.datamint.ai/{storage_key}?expires={int(expires_at.timestamp())}"
+        upload_url = (
+            f"https://storage.datamint.ai/{storage_key}?expires={int(expires_at.timestamp())}"
+        )
 
         return SubmissionInitResponse(
             submission_id=submission.id,

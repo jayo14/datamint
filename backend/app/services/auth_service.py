@@ -1,13 +1,14 @@
 """Authentication and wallet verification service implementing EIP-4361 SIWE."""
 
-import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.core.config import settings
-from app.core.exceptions import DataMintException, InvalidSignatureException
+from app.core.exceptions import InvalidSignatureException
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -70,7 +71,9 @@ class AuthService:
                 break
 
         if not nonce:
-            raise InvalidSignatureException(detail="Message does not contain a valid EIP-4361 nonce")
+            raise InvalidSignatureException(
+                detail="Message does not contain a valid EIP-4361 nonce"
+            )
 
         # Validate nonce in DB
         challenge_query = select(WalletNonceChallenge).where(
@@ -100,7 +103,8 @@ class AuthService:
         session = AuthSession(
             user_id=user.id,
             refresh_token_hash=refresh_token[:64],  # hash/store key prefix
-            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            expires_at=datetime.now(timezone.utc)
+            + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         )
         self.db.add(session)
         await self.db.flush()

@@ -1,11 +1,13 @@
 """API route dependencies for authentication, user session, and capabilities."""
 
 import uuid
-from typing import Callable, List
+from typing import Callable
+
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.core.database import get_db
 from app.core.exceptions import UnauthorizedCapabilityException
 from app.core.security import decode_token
@@ -60,6 +62,7 @@ async def get_current_user(
 
 def require_capability(required_capability: CapabilityType) -> Callable:
     """Dependency factory checking whether authenticated user holds the required capability."""
+
     async def capability_checker(current_user: User = Depends(get_current_user)) -> User:
         user_caps = [c.capability_type for c in current_user.capabilities if c.is_enabled]
         if required_capability.value not in user_caps:
