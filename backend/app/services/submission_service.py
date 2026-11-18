@@ -5,9 +5,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import List, Optional, Tuple
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.core.exceptions import (
     DataMintException,
     EntityNotFoundException,
@@ -56,6 +58,118 @@ class SubmissionService:
         await self.db.flush()
         return await self.get_submission(submission.id)
 
+    async def initialize_submission(
+        self, contributor_id: uuid.UUID, data: SubmissionCreate
+    ) -> SubmissionInitResponse:
+        """Initialize a new submission draft and request an upload URL in one operation."""
+        draft = await self.create_draft(
+            contributor_id=contributor_id,
+            data=SubmissionDraftCreate(campaign_id=data.campaign_id),
+        )
+        return await self.request_upload_url(
+            submission_id=draft.id,
+            contributor_id=contributor_id,
+            filename=data.filename,
+            mime_type=data.mime_type,
+            byte_size=data.byte_size,
+            asset_type=data.asset_type,
+            checksum_sha256=data.checksum_sha256,
+        )
+
+    async def complete_upload(
+        self, submission_id: uuid.UUID, contributor_id: Optional[uuid.UUID] = None
+    ) -> Submission:
+        """Signal that direct asset upload to storage has finished and advance to validation queue."""
+        submission = await self.get_submission(submission_id)
+        if contributor_id and submission.contributor_id != contributor_id:
+            raise DataMintException(
+                detail="Unauthorized: You cannot complete another contributor's upload"
+            )
+        for asset in submission.assets:
+            if not asset.is_uploaded and storage_provider.verify_object_exists(asset.storage_key):
+                asset.is_uploaded = True
+                asset.uploaded_at = datetime.now(timezone.utc)
+        submission.status = SubmissionStatus.QUEUED_FOR_VALIDATION.value
+        await self.db.flush()
+        return submission
+
+    async def approve_submission_and_authorize_payout(
+        self, submission_id: uuid.UUID, score: Decimal = Decimal("1.00")
+    ) -> Tuple[Submission, PayoutAuthorization]:
+        """
+        Approve submission and mint authorized voucher:
+        1. Register successful validation run.
+        2. Transition submission status to APPROVED.
+        3. Reserve payout in ledger (Available -> Reserved).
+        4. Create EIP-712 payout authorization voucher for contributor's primary wallet.
+        """
+        submission = await self.get_submission(submission_id)
+        campaign = submission.campaign
+
+        # 1. Validation run
+        vrun = ValidationRun(
+            submission_id=submission.id,
+            validator_type="RULE_BASED",
+            status=ValidationStatus.PASSED.value,
+            score=score,
+            completed_at=datetime.now(timezone.utc),
+        )
+        self.db.add(vrun)
+        await self.db.flush()
+
+        vfinding = ValidationFinding(
+            validation_run_id=vrun.id,
+            code="CRITERIA_MET",
+            severity="INFO",
+            message="Submission fully satisfies quality requirements",
+        )
+        self.db.add(vfinding)
+
+        # 2. Transition submission status
+        submission.status = SubmissionStatus.APPROVED.value
+        campaign.current_submissions += 1
+
+        # Check if campaign completed
+        if campaign.current_submissions >= campaign.target_submissions:
+            campaign.status = CampaignStatus.COMPLETED.value
+
+        # 3. Reserve funds in ledger
+        ref_id = f"sub:reserve:{submission.id}"
+        await self.ledger_service.reserve_payout(
+            campaign_id=campaign.id,
+            amount=campaign.reward_per_submission,
+            reference_id=ref_id,
+            notes=f"Reserved payout for approved submission {submission.id}",
+        )
+
+        # 4. Find contributor primary wallet
+        wallet_query = select(Wallet).where(
+            Wallet.user_id == submission.contributor_id,
+            Wallet.is_primary.is_(True),
+        )
+        wallet = (await self.db.execute(wallet_query)).scalar_one_or_none()
+        recipient_addr = wallet.address if wallet else "0x0000000000000000000000000000000000000000"
+
+        # 5. Generate payout voucher hash & mock signature
+        voucher_preimage = f"{submission.id}:{recipient_addr}:{campaign.reward_per_submission}"
+        voucher_hash = "0x" + hashlib.sha256(voucher_preimage.encode()).hexdigest()
+        mock_sig = "0x" + "00" * 65
+
+        payout = PayoutAuthorization(
+            submission_id=submission.id,
+            contributor_id=submission.contributor_id,
+            amount=campaign.reward_per_submission,
+            recipient_address=recipient_addr,
+            voucher_hash=voucher_hash,
+            signature=mock_sig,
+            status=PayoutStatus.AUTHORIZED.value,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        )
+        self.db.add(payout)
+        await self.db.flush()
+
+        return submission, payout
+
     async def update_draft(
         self, submission_id: uuid.UUID, contributor_id: uuid.UUID, data: SubmissionDraftUpdate
     ) -> Submission:
@@ -63,9 +177,14 @@ class SubmissionService:
         submission = await self.get_submission(submission_id)
 
         if submission.contributor_id != contributor_id:
-            raise DataMintException(detail="Unauthorized: You cannot edit another contributor's submission")
+            raise DataMintException(
+                detail="Unauthorized: You cannot edit another contributor's submission"
+            )
 
-        if submission.status not in (SubmissionStatus.DRAFT.value, SubmissionStatus.PENDING_UPLOAD.value):
+        if submission.status not in (
+            SubmissionStatus.DRAFT.value,
+            SubmissionStatus.PENDING_UPLOAD.value,
+        ):
             raise DataMintException(
                 detail=f"Submission is {submission.status} and cannot be modified after final submission",
                 code="SUBMISSION_IMMUTABLE",
@@ -93,10 +212,17 @@ class SubmissionService:
         submission = await self.get_submission(submission_id)
 
         if submission.contributor_id != contributor_id:
-            raise DataMintException(detail="Unauthorized: You cannot upload assets to another contributor's submission")
+            raise DataMintException(
+                detail="Unauthorized: You cannot upload assets to another contributor's submission"
+            )
 
-        if submission.status not in (SubmissionStatus.DRAFT.value, SubmissionStatus.PENDING_UPLOAD.value):
-            raise DataMintException(detail="Cannot upload assets to an already submitted or settled task")
+        if submission.status not in (
+            SubmissionStatus.DRAFT.value,
+            SubmissionStatus.PENDING_UPLOAD.value,
+        ):
+            raise DataMintException(
+                detail="Cannot upload assets to an already submitted or settled task"
+            )
 
         # Validate MIME type and size against campaign data type
         validate_file_specs(
@@ -148,7 +274,9 @@ class SubmissionService:
         submission = await self.get_submission(submission_id)
 
         if submission.contributor_id != contributor_id:
-            raise DataMintException(detail="Unauthorized: You cannot confirm uploads for another user")
+            raise DataMintException(
+                detail="Unauthorized: You cannot confirm uploads for another user"
+            )
 
         asset_query = select(SubmissionAsset).where(
             SubmissionAsset.id == asset_id,
@@ -180,10 +308,17 @@ class SubmissionService:
         # Lock campaign row to prevent race conditions when close to capacity
         submission = await self.get_submission(submission_id)
         if submission.contributor_id != contributor_id:
-            raise DataMintException(detail="Unauthorized: You cannot finalize another contributor's submission")
+            raise DataMintException(
+                detail="Unauthorized: You cannot finalize another contributor's submission"
+            )
 
-        if submission.status not in (SubmissionStatus.DRAFT.value, SubmissionStatus.PENDING_UPLOAD.value):
-            raise InvalidStateTransitionException(submission.status, SubmissionStatus.SUBMITTED.value)
+        if submission.status not in (
+            SubmissionStatus.DRAFT.value,
+            SubmissionStatus.PENDING_UPLOAD.value,
+        ):
+            raise InvalidStateTransitionException(
+                submission.status, SubmissionStatus.SUBMITTED.value
+            )
 
         # Atomic capacity check with row lock
         campaign_query = (
@@ -273,7 +408,11 @@ class SubmissionService:
         return submission
 
     async def list_contributor_submissions(
-        self, contributor_id: uuid.UUID, campaign_id: Optional[uuid.UUID] = None, page: int = 1, page_size: int = 20
+        self,
+        contributor_id: uuid.UUID,
+        campaign_id: Optional[uuid.UUID] = None,
+        page: int = 1,
+        page_size: int = 20,
     ) -> Tuple[List[Submission], int]:
         """List submissions authored by the authenticated contributor."""
         base_query = select(Submission).where(Submission.contributor_id == contributor_id)

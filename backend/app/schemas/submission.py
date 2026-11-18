@@ -4,7 +4,9 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
+
 from pydantic import Field
+
 from app.models.enums import AssetType, SubmissionStatus, ValidationStatus
 from app.schemas.common import BaseSchema
 
@@ -27,6 +29,23 @@ class SubmissionCreate(BaseSchema):
     byte_size: int = Field(..., gt=0)
     filename: str = Field(..., min_length=1)
     checksum_sha256: Optional[str] = None
+
+
+class UploadUrlRequest(BaseSchema):
+    filename: str = Field(..., min_length=1)
+    mime_type: str = Field(..., min_length=3)
+    byte_size: int = Field(..., gt=0)
+    asset_type: AssetType = Field(default=AssetType.AUDIO)
+    checksum_sha256: Optional[str] = None
+
+
+class ConfirmUploadRequest(BaseSchema):
+    asset_id: uuid.UUID
+
+
+class DownloadUrlResponse(BaseSchema):
+    download_url: str
+    expires_in_seconds: int = 1800
 
 
 class SubmissionInitResponse(BaseSchema):

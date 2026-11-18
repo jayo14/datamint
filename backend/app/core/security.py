@@ -3,10 +3,12 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+
 import bcrypt
 import jwt
 from eth_account import Account
 from eth_account.messages import encode_defunct
+
 from app.core.config import settings
 from app.core.exceptions import InvalidSignatureException
 

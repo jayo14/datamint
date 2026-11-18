@@ -4,7 +4,9 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
+
 from pydantic import Field, field_validator
+
 from app.models.enums import CampaignStatus, DataType
 from app.schemas.common import BaseSchema
 

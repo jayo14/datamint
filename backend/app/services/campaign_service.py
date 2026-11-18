@@ -4,15 +4,16 @@ import hashlib
 import uuid
 from decimal import Decimal
 from typing import List, Optional, Tuple
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.core.config import settings
 from app.core.exceptions import (
     DataMintException,
     EntityNotFoundException,
     InvalidStateTransitionException,
-    UnauthorizedCapabilityException,
 )
 from app.models.campaign import CampaignRequirement, DatasetCampaign
 from app.models.enums import CampaignStatus
@@ -30,9 +31,7 @@ class CampaignService:
         self.db = db
         self.ledger_service = LedgerService(db)
 
-    async def create_campaign(
-        self, creator_id: uuid.UUID, data: CampaignCreate
-    ) -> DatasetCampaign:
+    async def create_campaign(self, creator_id: uuid.UUID, data: CampaignCreate) -> DatasetCampaign:
         """Create a new dataset campaign in DRAFT state."""
         campaign = DatasetCampaign(
             creator_id=creator_id,
@@ -165,7 +164,9 @@ class CampaignService:
             raise DataMintException(detail="Only the campaign creator can submit for funding")
 
         if campaign.status != CampaignStatus.DRAFT.value:
-            raise InvalidStateTransitionException(campaign.status, CampaignStatus.PENDING_FUNDING.value)
+            raise InvalidStateTransitionException(
+                campaign.status, CampaignStatus.PENDING_FUNDING.value
+            )
 
         # Transition status
         campaign.status = CampaignStatus.PENDING_FUNDING.value
@@ -177,12 +178,17 @@ class CampaignService:
 
         reward_wei = int(campaign.reward_per_submission * Decimal("1e18"))
         required_budget_wei = int(
-            campaign.reward_per_submission * Decimal(str(campaign.target_submissions)) * Decimal("1e18")
+            campaign.reward_per_submission
+            * Decimal(str(campaign.target_submissions))
+            * Decimal("1e18")
         )
 
-        metadata_digest = "0x" + hashlib.sha256(
-            f"{campaign.title}:{campaign.description}:{campaign.data_type}".encode()
-        ).hexdigest()
+        metadata_digest = (
+            "0x"
+            + hashlib.sha256(
+                f"{campaign.title}:{campaign.description}:{campaign.data_type}".encode()
+            ).hexdigest()
+        )
 
         return FundingParametersResponse(
             campaign_id=campaign.id,
@@ -210,7 +216,9 @@ class CampaignService:
         """
         campaign = await self.get_campaign(campaign_id)
 
-        required_funding = campaign.reward_per_submission * Decimal(str(campaign.target_submissions))
+        required_funding = campaign.reward_per_submission * Decimal(
+            str(campaign.target_submissions)
+        )
         if amount < required_funding:
             raise DataMintException(
                 detail=f"Deposited amount {amount} is less than required budget {required_funding}",
@@ -226,6 +234,19 @@ class CampaignService:
         )
 
         campaign.status = CampaignStatus.ACTIVE.value
+        await self.db.flush()
+        return campaign
+
+    async def activate_campaign(
+        self, campaign_id: uuid.UUID, onchain_campaign_id: str
+    ) -> DatasetCampaign:
+        """Activate campaign after validating on-chain escrow funding exists."""
+        campaign = await self.get_campaign(campaign_id)
+        if not campaign.escrow or campaign.escrow.total_funded <= Decimal("0.00"):
+            raise InvalidStateTransitionException(campaign.status, CampaignStatus.ACTIVE.value)
+        campaign.status = CampaignStatus.ACTIVE.value
+        if campaign.escrow:
+            campaign.escrow.onchain_campaign_id = onchain_campaign_id
         await self.db.flush()
         return campaign
 

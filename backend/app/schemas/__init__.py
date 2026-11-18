@@ -33,7 +33,8 @@ from app.schemas.submission import (
     ValidationRunResponse,
 )
 from app.schemas.wallet import (
-    ConnectWalletRequest,
+    LinkWalletRequest,
+    SetPrimaryWalletRequest,
     WalletResponse,
 )
 
@@ -48,7 +49,8 @@ __all__ = [
     "AuthTokenResponse",
     "RefreshTokenRequest",
     "WalletResponse",
-    "ConnectWalletRequest",
+    "LinkWalletRequest",
+    "SetPrimaryWalletRequest",
     "CampaignCreate",
     "CampaignRequirementCreate",
     "CampaignRequirementResponse",

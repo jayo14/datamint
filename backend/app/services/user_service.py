@@ -1,12 +1,15 @@
 """User profile and capability management service."""
 
 import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.core.exceptions import EntityNotFoundException
 from app.models.identity import User, UserProfile
 from app.schemas.user import UserDetailResponse, UserProfileResponse, UserProfileUpdate
+from app.schemas.wallet import WalletResponse
 
 
 class UserService:
@@ -39,7 +42,7 @@ class UserService:
             updated_at=user.updated_at,
             profile=UserProfileResponse.model_validate(user.profile) if user.profile else None,
             capabilities=caps,
-            wallets=user.wallets,
+            wallets=[WalletResponse.model_validate(w) for w in user.wallets],
         )
 
     async def update_profile(
