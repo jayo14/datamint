@@ -228,7 +228,7 @@ class _HomeScaffoldState extends ConsumerState<HomeScaffold> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentTabIndex,
         onTap: (index) => setState(() => _currentTabIndex = index),
-        type: BottomNavigationBarStyle.fixed,
+        type: BottomNavigationBarType.fixed,
         backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
         selectedItemColor: isContributor ? AppColors.mintPrimary : AppColors.celoGold,
         unselectedItemColor: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,

@@ -15,12 +15,10 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isConnectingWallet = false;
-  String? _statusMessage;
 
   Future<void> _handleConnectWallet() async {
     setState(() {
       _isConnectingWallet = true;
-      _statusMessage = 'Connecting wallet...';
     });
 
     try {

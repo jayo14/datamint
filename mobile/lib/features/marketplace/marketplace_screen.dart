@@ -11,8 +11,6 @@ class MarketplaceScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final filter = ref.watch(marketplaceFilterProvider);
     final campaignsAsync = ref.watch(marketplaceCampaignsProvider);
 

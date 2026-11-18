@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/theme/app_theme.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../shared/providers/app_providers.dart';

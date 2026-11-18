@@ -88,6 +88,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
               ElevatedButton(
                 onPressed: () async {
                   Navigator.pop(ctx);
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
                   try {
                     final service = ref.read(reviewServiceProvider);
                     await service.decideReview(
@@ -98,25 +99,21 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                           : null,
                     );
                     ref.invalidate(reviewQueueProvider);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Submission decided as $decision.'),
-                          backgroundColor: decision == 'APPROVE'
-                              ? AppColors.mintPrimary
-                              : AppColors.error,
-                        ),
-                      );
-                    }
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Submission decided as $decision.'),
+                        backgroundColor: decision == 'APPROVE'
+                            ? AppColors.mintPrimary
+                            : AppColors.error,
+                      ),
+                    );
                   } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to decide review: $e'),
-                          backgroundColor: AppColors.error,
-                        ),
-                      );
-                    }
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to decide review: $e'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
                   }
                 },
                 child: const Text('Submit Decision'),
