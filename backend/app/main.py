@@ -6,7 +6,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.v1 import api_v1_router
@@ -54,9 +54,9 @@ app = FastAPI(
         "* **Double-entry financial ledger** enforcing the invariant Funded = Claimed + Reserved + Available + Refunded\n"
         "* **Non-custodial EIP-712 pull-payment vouchers** for instant cUSD claim on Celo\n"
     ),
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    docs_url=f"{settings.API_V1_STR}/docs",
-    redoc_url=f"{settings.API_V1_STR}/redoc",
+    openapi_url="/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan,
 )
 
@@ -86,11 +86,19 @@ async def datamint_exception_handler(request: Request, exc: DataMintException) -
 app.include_router(api_v1_router, prefix=settings.API_V1_STR)
 
 
+@app.get("/api/v1/docs", include_in_schema=False)
+async def legacy_docs_redirect():
+    """Redirect legacy /api/v1/docs to root /docs route."""
+    return RedirectResponse(url="/docs")
+
+
 @app.get("/", tags=["Root"])
 async def root() -> dict:
     return {
         "name": settings.PROJECT_NAME,
         "version": "1.0.0",
-        "docs": f"{settings.API_V1_STR}/docs",
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "openapi": "/openapi.json",
         "status": "operational",
     }
