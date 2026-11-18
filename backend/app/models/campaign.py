@@ -68,6 +68,10 @@ class DatasetCampaign(Base):
         nullable=False,
     )
     reward_currency: Mapped[str] = mapped_column(String(10), default="cUSD", nullable=False)
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    tags: Mapped[Optional[list]] = mapped_column(JsonType, nullable=True)
+    instructions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    eligibility_criteria: Mapped[Optional[dict]] = mapped_column(JsonType, nullable=True)
     deadline: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

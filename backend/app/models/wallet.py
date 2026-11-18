@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -51,6 +51,13 @@ class WalletNonceChallenge(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UuidType,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    action: Mapped[str] = mapped_column(String(50), default="login", nullable=False)
     address: Mapped[str] = mapped_column(String(42), nullable=False, index=True)
     nonce: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     chain_id: Mapped[int] = mapped_column(Integer, default=42220, nullable=False)

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -56,7 +57,9 @@ class Submission(Base):
         index=True,
     )
     attempt_number: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    draft_data: Mapped[Optional[dict]] = mapped_column(JsonType, nullable=True)
     metadata_json: Mapped[Optional[dict]] = mapped_column(JsonType, nullable=True)
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -114,6 +117,8 @@ class SubmissionAsset(Base):
     byte_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     checksum_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    is_uploaded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    uploaded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
