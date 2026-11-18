@@ -97,7 +97,11 @@ async def test_media_upload_validation_and_access_control(async_client, db_sessi
     assert "content-type=audio/wav" in upload_data["upload_url"]
 
     # Retrieve submission to get the generated asset id
-    sub_detail_res = await async_client.get(f"/api/v1/submissions/{sub_id}")
+    sub_detail_res = await async_client.get(
+        f"/api/v1/submissions/{sub_id}",
+        headers=contrib_headers,
+    )
+    assert sub_detail_res.status_code == 200
     asset_id = sub_detail_res.json()["assets"][0]["id"]
 
     # 6. Confirm upload

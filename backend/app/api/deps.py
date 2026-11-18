@@ -1,7 +1,7 @@
 """API route dependencies for authentication, user session, and capabilities."""
 
 import uuid
-from typing import Callable
+from typing import Callable, Optional
 
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
@@ -16,14 +16,14 @@ from app.models.identity import User
 
 
 async def get_current_user(
-    authorization: str = Header(..., description="Bearer JWT token"),
+    authorization: Optional[str] = Header(None, description="Bearer JWT token"),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """Validate Bearer JWT and return authenticated User with capabilities loaded."""
-    if not authorization.startswith("Bearer "):
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authorization header format. Expected 'Bearer <token>'",
+            detail="Missing or invalid authorization header format. Expected 'Bearer <token>'",
         )
 
     token = authorization.split(" ")[1]

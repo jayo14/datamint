@@ -4,10 +4,10 @@ import math
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_capability
+from app.api.deps import get_current_user, require_capability
 from app.core.database import get_db
 from app.core.rate_limit import media_rate_limiter, submission_rate_limiter
 from app.models.enums import CapabilityType
@@ -221,7 +221,10 @@ async def complete_submission_upload(
 ) -> SubmissionResponse:
     """Legacy upload completion endpoint."""
     service = SubmissionService(db)
-    submission = await service.complete_upload(submission_id=submission_id)
+    submission = await service.complete_upload(
+        submission_id=submission_id,
+        contributor_id=current_user.id,
+    )
     await db.commit()
     return SubmissionResponse.model_validate(submission)
 
@@ -229,9 +232,22 @@ async def complete_submission_upload(
 @router.get("/{submission_id}", response_model=SubmissionResponse, status_code=status.HTTP_200_OK)
 async def get_submission_details(
     submission_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SubmissionResponse:
-    """Get submission details, status, and validation findings."""
+    """Get submission details, status, and validation findings. Access restricted to author, campaign creator, or reviewers."""
     service = SubmissionService(db)
     submission = await service.get_submission(submission_id=submission_id)
+
+    user_caps = {c.capability_type for c in current_user.capabilities if c.is_enabled}
+    is_owner = submission.contributor_id == current_user.id
+    is_creator = submission.campaign is not None and submission.campaign.creator_id == current_user.id
+    is_authorized_role = bool(user_caps.intersection({CapabilityType.REVIEWER.value, CapabilityType.ADMIN.value}))
+
+    if not (is_owner or is_creator or is_authorized_role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: You do not have permission to view this submission.",
+        )
+
     return SubmissionResponse.model_validate(submission)
