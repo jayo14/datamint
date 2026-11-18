@@ -8,7 +8,13 @@ import pytest
 from eth_account import Account
 from sqlalchemy import select
 
-from app.models.enums import BlockchainEventStatus, CampaignStatus, DataType, PayoutStatus, SubmissionStatus
+from app.models.enums import (
+    BlockchainEventStatus,
+    CampaignStatus,
+    DataType,
+    PayoutStatus,
+    SubmissionStatus,
+)
 from app.models.financial import BlockchainEvent
 from app.models.identity import User
 from app.models.notification import Notification

@@ -6,9 +6,11 @@ Create Date: 2026-11-18 14:00:00.000000
 
 """
 from typing import Sequence, Union
-from alembic import op
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "0002_phase3_core_workflows"
 down_revision: Union[str, None] = "0001_initial_schema"

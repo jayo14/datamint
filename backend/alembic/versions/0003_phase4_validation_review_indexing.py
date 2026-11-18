@@ -6,9 +6,11 @@ Create Date: 2026-11-18 15:00:00.000000
 
 """
 from typing import Sequence, Union
-from alembic import op
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "0003_phase4_validation_review_indexing"
 down_revision: Union[str, None] = "0002_phase3_core_workflows"

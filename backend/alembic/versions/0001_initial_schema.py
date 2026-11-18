@@ -1,14 +1,16 @@
 """Initial PostgreSQL schema for DataMint
 
 Revision ID: 0001_initial_schema
-Revises: 
+Revises:
 Create Date: 2026-11-18 13:00:00.000000
 
 """
 from typing import Sequence, Union
-from alembic import op
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "0001_initial_schema"
 down_revision: Union[str, None] = None

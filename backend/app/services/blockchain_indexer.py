@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
-from app.models.campaign import DatasetCampaign
 from app.models.enums import BlockchainEventStatus, CampaignStatus, PayoutStatus, SubmissionStatus
 from app.models.financial import (
     BlockchainEvent,
@@ -599,7 +598,6 @@ class BlockchainIndexerService:
         escrow = (await self.db.execute(query)).scalar_one_or_none()
         if escrow and escrow.campaign:
             escrow.campaign.status = CampaignStatus.CANCELLED.value
-            escrow.status = "CANCELLED"
             notif = Notification(
                 user_id=escrow.campaign.creator_id,
                 event_type="CAMPAIGN_CANCELLED",
@@ -621,7 +619,6 @@ class BlockchainIndexerService:
         escrow = (await self.db.execute(query)).scalar_one_or_none()
         if escrow and escrow.campaign:
             escrow.campaign.status = CampaignStatus.COMPLETED.value
-            escrow.status = "CLOSED"
             notif = Notification(
                 user_id=escrow.campaign.creator_id,
                 event_type="CAMPAIGN_COMPLETED",
