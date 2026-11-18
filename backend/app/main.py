@@ -28,7 +28,8 @@ class SecurityHeadersAndCorrelationMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'"
+            "default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; "
+            "form-action 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'"
         )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         if settings.ENVIRONMENT.lower() in ("production", "staging"):
