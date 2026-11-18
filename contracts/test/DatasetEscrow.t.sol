@@ -454,4 +454,99 @@ contract DatasetEscrowUnitTest is Test {
         vm.expectRevert();
         malEscrow.claimReward(auth, sig);
     }
+
+    // --- Pre-Mainnet Invariant & Authorization Edge Cases ---
+
+    function test_ClaimReward_CrossCampaignReplay_Reverts() public {
+        bytes32 campaign2Id = keccak256("campaign-2");
+        vm.startPrank(creator);
+        escrow.createAndFundCampaign(defaultCampaignId, rewardPerSubmission, maxSubmissions, claimDuration, metadataHash);
+        escrow.createAndFundCampaign(campaign2Id, rewardPerSubmission, maxSubmissions, claimDuration, metadataHash);
+        vm.stopPrank();
+
+        bytes32 nonce = keccak256("nonce-cross-replay");
+        IDatasetEscrow.RewardAuthorization memory auth = IDatasetEscrow.RewardAuthorization({
+            campaignId: defaultCampaignId,
+            contributor: contributor1,
+            amount: rewardPerSubmission,
+            nonce: nonce,
+            deadline: block.timestamp + 1 hours
+        });
+
+        // Valid signature for defaultCampaignId
+        bytes memory sig = _signAuthorization(auth, signerPrivateKey);
+
+        // Contributor attempts to submit the voucher targeting campaign2Id
+        auth.campaignId = campaign2Id;
+        vm.prank(contributor1);
+        vm.expectRevert(IDatasetEscrow.InvalidSignature.selector);
+        escrow.claimReward(auth, sig);
+    }
+
+    function test_ClaimReward_AmountTampered_Reverts() public {
+        vm.prank(creator);
+        escrow.createAndFundCampaign(defaultCampaignId, rewardPerSubmission, maxSubmissions, claimDuration, metadataHash);
+
+        bytes32 nonce = keccak256("nonce-amount-tamper");
+        IDatasetEscrow.RewardAuthorization memory auth = IDatasetEscrow.RewardAuthorization({
+            campaignId: defaultCampaignId,
+            contributor: contributor1,
+            amount: rewardPerSubmission,
+            nonce: nonce,
+            deadline: block.timestamp + 1 hours
+        });
+
+        bytes memory sig = _signAuthorization(auth, signerPrivateKey);
+
+        // Tamper with the amount to claim double reward
+        auth.amount = rewardPerSubmission * 2;
+        vm.prank(contributor1);
+        // Signature fails because struct hash no longer matches signed digest
+        vm.expectRevert(IDatasetEscrow.InvalidSignature.selector);
+        escrow.claimReward(auth, sig);
+    }
+
+    function test_Cancellation_CannotRefundCommittedClaims() public {
+        vm.prank(creator);
+        escrow.createAndFundCampaign(defaultCampaignId, rewardPerSubmission, 2, claimDuration, metadataHash);
+
+        // 1 claim is completed
+        bytes32 nonce = keccak256("nonce-committed-claim");
+        IDatasetEscrow.RewardAuthorization memory auth = IDatasetEscrow.RewardAuthorization({
+            campaignId: defaultCampaignId,
+            contributor: contributor1,
+            amount: rewardPerSubmission,
+            nonce: nonce,
+            deadline: block.timestamp + 1 hours
+        });
+        bytes memory sig = _signAuthorization(auth, signerPrivateKey);
+
+        vm.prank(contributor1);
+        escrow.claimReward(auth, sig);
+
+        // Creator cancels remaining campaign
+        vm.prank(creator);
+        escrow.cancelCampaign(defaultCampaignId, "Early cancellation");
+
+        // Fast forward past timelock
+        vm.warp(block.timestamp + 3 days + 1);
+
+        uint256 refundable = escrow.getRefundableAmount(defaultCampaignId);
+        // Total funded: 2 * rewardPerSubmission. Claimed: 1 * rewardPerSubmission.
+        // Refundable MUST strictly be 1 * rewardPerSubmission, never refunding claimed funds.
+        assertEq(refundable, rewardPerSubmission);
+
+        uint256 creatorBalanceBefore = token.balanceOf(creator);
+        vm.prank(creator);
+        uint256 refunded = escrow.refundUnallocatedFunds(defaultCampaignId);
+
+        assertEq(refunded, rewardPerSubmission);
+        assertEq(token.balanceOf(creator), creatorBalanceBefore + rewardPerSubmission);
+
+        // Subsequent refund attempt yields 0
+        assertEq(escrow.getRefundableAmount(defaultCampaignId), 0);
+        vm.prank(creator);
+        vm.expectRevert(abi.encodeWithSelector(IDatasetEscrow.NoFundsToRefund.selector, defaultCampaignId));
+        escrow.refundUnallocatedFunds(defaultCampaignId);
+    }
 }

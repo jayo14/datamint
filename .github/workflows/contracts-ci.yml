@@ -32,8 +32,14 @@ jobs:
         with:
           version: nightly
 
-      - name: Build Contracts
-        run: forge build
+      - name: Verify Compiler & Toolchain
+        run: |
+          forge --version
+          grep 'solc_version = "0.8.24"' foundry.toml
+          grep 'optimizer = true' foundry.toml
 
-      - name: Run Unit & Fuzz Tests
-        run: forge test -vv
+      - name: Build Contracts
+        run: forge build --sizes
+
+      - name: Run Unit, Fuzz, and Invariant Test Suites
+        run: forge test -vv --match-test "test|invariant"

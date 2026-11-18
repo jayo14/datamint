@@ -16,14 +16,14 @@ remappings = [
 
 [rpc_endpoints]
 celo = "https://forno.celo.org"
-celo_alfajores = "https://alfajores-forno.celo-testnet.org"
 celo_sepolia = "https://forno.celo-sepolia.celo-testnet.org"
+celo_alfajores = "https://alfajores-forno.celo-testnet.org"
 
 [etherscan]
 celo = { key = "${CELOSCAN_API_KEY}", url = "https://api.celoscan.io/api" }
 celo_sepolia = { key = "${CELOSCAN_API_KEY}", url = "https://api-sepolia.celoscan.io/api" }
 
 [invariant]
-runs = 64
-depth = 15
+runs = 256
+depth = 50
 fail_on_revert = false
