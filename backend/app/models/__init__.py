@@ -15,8 +15,10 @@ from app.models.enums import (
     ValidationStatus,
 )
 from app.models.financial import (
+    BlockchainEvent,
     EscrowCampaign,
     IdempotencyRecord,
+    IndexerSyncState,
     LedgerEntry,
     PayoutAuthorization,
 )
@@ -26,7 +28,12 @@ from app.models.identity import (
     UserCapability,
     UserProfile,
 )
+from app.models.notification import (
+    Notification,
+    OutboxEvent,
+)
 from app.models.submission import (
+    Appeal,
     Review,
     Submission,
     SubmissionAsset,
@@ -60,8 +67,13 @@ __all__ = [
     "ValidationRun",
     "ValidationFinding",
     "Review",
+    "Appeal",
     "EscrowCampaign",
     "LedgerEntry",
     "PayoutAuthorization",
+    "BlockchainEvent",
+    "IndexerSyncState",
+    "Notification",
+    "OutboxEvent",
     "IdempotencyRecord",
 ]

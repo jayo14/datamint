@@ -68,3 +68,38 @@ class PayoutStatus(str, enum.Enum):
     CLAIMED = "CLAIMED"
     EXPIRED = "EXPIRED"
     REVOKED = "REVOKED"
+
+
+class ValidationOutcome(str, enum.Enum):
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    HUMAN_REVIEW = "HUMAN_REVIEW"
+
+
+class ReviewType(str, enum.Enum):
+    MANUAL_VALIDATION = "MANUAL_VALIDATION"
+    APPEAL = "APPEAL"
+
+
+class ReviewDecision(str, enum.Enum):
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+class AppealStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    UPHELD = "UPHELD"
+    OVERTURNED = "OVERTURNED"
+
+
+class BlockchainEventStatus(str, enum.Enum):
+    INDEXED = "INDEXED"
+    PROCESSED = "PROCESSED"
+    ORPHANED = "ORPHANED"
+    FAILED = "FAILED"
+
+
+class OutboxStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    PUBLISHED = "PUBLISHED"
+    FAILED = "FAILED"

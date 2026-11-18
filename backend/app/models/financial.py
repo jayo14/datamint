@@ -6,13 +6,17 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import (
+    BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -158,8 +162,15 @@ class PayoutAuthorization(Base):
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(24, 6), nullable=False)
     recipient_address: Mapped[str] = mapped_column(String(42), nullable=False, index=True)
+    nonce: Mapped[Optional[str]] = mapped_column(String(66), unique=True, nullable=True, index=True)
+    onchain_campaign_id: Mapped[Optional[str]] = mapped_column(
+        String(66), nullable=True, index=True
+    )
+    deadline: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     voucher_hash: Mapped[str] = mapped_column(String(66), unique=True, nullable=False, index=True)
     signature: Mapped[str] = mapped_column(String(132), nullable=False)
+    claim_tx_hash: Mapped[Optional[str]] = mapped_column(String(66), nullable=True, index=True)
+    claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(
         String(50),
         default=PayoutStatus.AUTHORIZED.value,
@@ -175,6 +186,64 @@ class PayoutAuthorization(Base):
 
     submission: Mapped["Submission"] = relationship(
         "Submission", back_populates="payout_authorization"
+    )
+
+
+class BlockchainEvent(Base):
+    """Indexed Celo smart contract events with deduplication and reorg protection."""
+
+    __tablename__ = "blockchain_events"
+    __table_args__ = (
+        UniqueConstraint("transaction_hash", "log_index", name="uq_blockchain_events_tx_log"),
+        Index("ix_blockchain_events_name_block", "event_name", "block_number"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UuidType,
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    chain_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    contract_address: Mapped[str] = mapped_column(String(42), nullable=False, index=True)
+    event_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    transaction_hash: Mapped[str] = mapped_column(String(66), nullable=False, index=True)
+    block_number: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    block_hash: Mapped[str] = mapped_column(String(66), nullable=False)
+    log_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    parameters: Mapped[dict] = mapped_column(JsonType, nullable=False)
+    is_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    confirmations: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50),
+        default="INDEXED",
+        nullable=False,
+        index=True,
+    )
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+
+class IndexerSyncState(Base):
+    """Checkpoint of last indexed block height per contract and chain."""
+
+    __tablename__ = "indexer_sync_state"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UuidType,
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    chain_id: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
+    contract_address: Mapped[str] = mapped_column(String(42), nullable=False)
+    last_processed_block: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    last_sync_timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
 
