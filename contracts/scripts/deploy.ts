@@ -6,8 +6,13 @@ async function main() {
 
   console.log("Deploying contracts with the account:", deployer.address);
 
-  // Alfajores cUSD address
-  const cUSD_ADDRESS = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
+  // Require cUSD token address explicitly from environment configuration
+  const cUSD_ADDRESS = process.env.CUSD_TOKEN_ADDRESS;
+  if (!cUSD_ADDRESS) {
+    throw new Error(
+      "Missing CUSD_TOKEN_ADDRESS in environment. Specify the public token contract address for target network."
+    );
+  }
 
   const DataMintEscrow = await ethers.getContractFactory("DataMintEscrow");
   const escrow = await DataMintEscrow.deploy(cUSD_ADDRESS);

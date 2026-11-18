@@ -42,23 +42,23 @@ class EnvConfig {
   static const EnvConfig dev = EnvConfig(
     environment: Environment.dev,
     apiBaseUrl: 'http://localhost:8000/api/v1',
-    chainId: 44787, // Celo Alfajores Testnet
-    chainName: 'Celo Alfajores',
-    rpcUrl: 'https://alfajores-forno.celo-testnet.org',
+    chainId: 11142220, // Celo Sepolia Testnet
+    chainName: 'Celo Sepolia',
+    rpcUrl: 'https://forno.celo-sepolia.celo-testnet.org',
     escrowContractAddress: '0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44',
     cusdTokenAddress: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
-    blockExplorerUrl: 'https://alfajores.celoscan.io',
+    blockExplorerUrl: 'https://sepolia.celoscan.io',
   );
 
   static const EnvConfig staging = EnvConfig(
     environment: Environment.staging,
     apiBaseUrl: 'https://staging-api.datamint.ai/api/v1',
-    chainId: 44787,
-    chainName: 'Celo Alfajores',
-    rpcUrl: 'https://alfajores-forno.celo-testnet.org',
+    chainId: 11142220, // Celo Sepolia Testnet
+    chainName: 'Celo Sepolia',
+    rpcUrl: 'https://forno.celo-sepolia.celo-testnet.org',
     escrowContractAddress: '0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44',
     cusdTokenAddress: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
-    blockExplorerUrl: 'https://alfajores.celoscan.io',
+    blockExplorerUrl: 'https://sepolia.celoscan.io',
   );
 
   static const EnvConfig production = EnvConfig(

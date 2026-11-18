@@ -122,7 +122,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                               Icon(Icons.link_rounded, size: 12, color: AppColors.celoGold),
                               SizedBox(width: 4),
                               Text(
-                                'Celo Alfajores',
+                                'Celo Sepolia',
                                 style: TextStyle(
                                   color: AppColors.celoGold,
                                   fontWeight: FontWeight.bold,

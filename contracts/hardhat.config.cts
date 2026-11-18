@@ -9,6 +9,11 @@ const config: HardhatUserConfig = {
   solidity: "0.8.24",
   networks: {
     hardhat: {},
+    celo_sepolia: {
+      url: "https://forno.celo-sepolia.celo-testnet.org",
+      accounts: process.env.PRIVATE_KEY_DEPLOYER ? [process.env.PRIVATE_KEY_DEPLOYER] : [],
+      chainId: 11142220,
+    },
     alfajores: {
       url: "https://alfajores-forno.celo-testnet.org",
       accounts: process.env.PRIVATE_KEY_DEPLOYER ? [process.env.PRIVATE_KEY_DEPLOYER] : [],

@@ -16,7 +16,7 @@ const ERC20_ABI = [
 ]
 
 const ESCROW_ADDRESS = process.env.NEXT_PUBLIC_ESCROW_ADDRESS || ""
-const CUSD_ADDRESS = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1" // Alfajores
+const CUSD_ADDRESS = process.env.NEXT_PUBLIC_CUSD_ADDRESS || "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1" // Celo Sepolia (11142220) / Alfajores legacy compatible
 
 export async function getContract(signer: ethers.Signer) {
   return new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)

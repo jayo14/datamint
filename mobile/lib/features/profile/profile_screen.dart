@@ -249,7 +249,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 Icon(Icons.circle, color: AppColors.success, size: 10),
                                 SizedBox(width: 6),
                                 Text(
-                                  'Celo Alfajores Testnet',
+                                  'Celo Sepolia Testnet',
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                                 ),
                               ],
