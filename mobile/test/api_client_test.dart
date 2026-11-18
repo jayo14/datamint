@@ -62,7 +62,7 @@ void main() {
   group('ApiClient Interceptors & Headers', () {
     test('attaches stored Bearer access token to outgoing request headers', () async {
       final dio = Dio();
-      final client = ApiClient(storage: mockStorage, customDio: dio);
+      ApiClient(storage: mockStorage, customDio: dio);
 
       // Add a test adapter to intercept and inspect request options
       dio.httpClientAdapter = HttpClientAdapter();
@@ -83,7 +83,7 @@ void main() {
     });
 
     test('maps 401 error to AuthException', () {
-      final client = ApiClient(storage: mockStorage);
+      ApiClient(storage: mockStorage);
 
       final dioError = DioException(
         requestOptions: RequestOptions(path: '/auth/login'),
@@ -115,7 +115,7 @@ void main() {
 
     test('preserves custom Authorization header if explicitly provided', () async {
       final dio = Dio();
-      final client = ApiClient(storage: mockStorage, customDio: dio);
+      ApiClient(storage: mockStorage, customDio: dio);
 
       final options = RequestOptions(
         path: '/custom',

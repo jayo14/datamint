@@ -34,7 +34,7 @@ void main() {
     });
 
     test('contributor-only user canContribute=true and canCreate=false', () {
-      final user = UserModel.fromJson({
+      final user = UserModel.fromJson(const {
         'id': 'usr-contrib',
         'email': 'only@contrib.com',
         'role': 'CONTRIBUTOR',
@@ -118,7 +118,7 @@ void main() {
     });
 
     test('rejected submission allows appeal', () {
-      final sub = SubmissionModel.fromJson({
+      final sub = SubmissionModel.fromJson(const {
         'id': 'sub-rej',
         'campaign_id': 'camp-1',
         'contributor_id': 'usr-1',
@@ -136,12 +136,12 @@ void main() {
   group('PayoutVoucherModel Serialization', () {
     test('deserializes EIP-712 payout voucher correctly', () {
       final json = {
-        'campaign_id': '0x' + 'a' * 64,
+        'campaign_id': '0x${'a' * 64}',
         'contributor': '0x71c67d5e1d346644578325039B642710A477dFB0',
         'amount': '2500000000000000000', // 2.5 cUSD in wei
         'nonce': 1,
         'deadline': 1800000000,
-        'signature': '0x' + 'f' * 130,
+        'signature': '0x${'f' * 130}',
         'contract_address': '0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44',
         'chain_id': 44787,
       };
