@@ -44,6 +44,7 @@ next-env.d.ts
 contracts/cache/
 contracts/out/
 contracts/artifacts/build-info/
+foundry.lock
 
 # python
 __pycache__/
