@@ -1,0 +1,178 @@
+version: "3.8"
+
+networks:
+  datamint-public:
+    driver: bridge
+  datamint-internal:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  redis_prod_data:
+    driver: local
+  media_storage_data:
+    driver: local
+
+services:
+  # ----------------------------------------------------------------------------
+  # PostgreSQL 16 Enterprise Database
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: datamint-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-datamint_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required}
+      POSTGRES_DB: ${POSTGRES_DB:-datamint_prod}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - datamint-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-datamint_admin} -d ${POSTGRES_DB:-datamint_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # Redis 7 In-Memory Cache and Task Broker
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: datamint-redis-prod
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Redis password required}"]
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - datamint-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # DataMint FastAPI Modular Monolith Backend
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: datamint-backend-prod
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-datamint_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-datamint_prod}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?Production JWT secret required}
+      - JWT_ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=15
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - CELO_RPC_URL=${CELO_RPC_URL:-https://forno.celo.org}
+      - CELO_CHAIN_ID=${CELO_CHAIN_ID:-42220}
+      - ESCROW_CONTRACT_ADDRESS=${ESCROW_CONTRACT_ADDRESS:?Escrow address required}
+      - PLATFORM_SIGNER_PRIVATE_KEY=${PLATFORM_SIGNER_PRIVATE_KEY:?Platform signer private key required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - datamint-internal
+      - datamint-public
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # Celery Asynchronous Task Worker
+  # ----------------------------------------------------------------------------
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: datamint-worker-prod
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-datamint_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-datamint_prod}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - CELO_RPC_URL=${CELO_RPC_URL:-https://forno.celo.org}
+      - CELO_CHAIN_ID=${CELO_CHAIN_ID:-42220}
+      - ESCROW_CONTRACT_ADDRESS=${ESCROW_CONTRACT_ADDRESS}
+      - PLATFORM_SIGNER_PRIVATE_KEY=${PLATFORM_SIGNER_PRIVATE_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - datamint-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+
+  # ----------------------------------------------------------------------------
+  # Celery Beat Periodic Scheduler (Blockchain Sync, Stale Cleanup, Reconciliation)
+  # ----------------------------------------------------------------------------
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: datamint-beat-prod
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info"]
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-datamint_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-datamint_prod}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - CELO_RPC_URL=${CELO_RPC_URL:-https://forno.celo.org}
+      - CELO_CHAIN_ID=${CELO_CHAIN_ID:-42220}
+      - ESCROW_CONTRACT_ADDRESS=${ESCROW_CONTRACT_ADDRESS}
+      - PLATFORM_SIGNER_PRIVATE_KEY=${PLATFORM_SIGNER_PRIVATE_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - datamint-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
