@@ -40,8 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# hardhat
+# hardhat & foundry
 contracts/cache/
+contracts/out/
 contracts/artifacts/build-info/
 
 # python
