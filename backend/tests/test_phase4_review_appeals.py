@@ -1,5 +1,6 @@
 """Tests for human review queue, manual review decisions, and contributor appeals."""
 
+import secrets
 from decimal import Decimal
 
 import pytest
@@ -53,7 +54,7 @@ async def test_review_queue_and_conflict_of_interest(db_session):
     )
     campaign.escrow.total_funded = Decimal("15.00")
     campaign.escrow.total_available = Decimal("15.00")
-    await campaign_service.activate_campaign(campaign.id, "0x" + "1" * 64)
+    await campaign_service.activate_campaign(campaign.id, f"0x{secrets.token_hex(32)}")
     await db_session.flush()
 
     sub = await submission_service.create_draft(
@@ -125,7 +126,7 @@ async def test_rejection_and_appeals_workflow(db_session):
     )
     campaign.escrow.total_funded = Decimal("10.00")
     campaign.escrow.total_available = Decimal("10.00")
-    await campaign_service.activate_campaign(campaign.id, "0x" + "2" * 64)
+    await campaign_service.activate_campaign(campaign.id, f"0x{secrets.token_hex(32)}")
     await db_session.flush()
 
     sub = await submission_service.create_draft(

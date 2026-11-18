@@ -1,5 +1,6 @@
 """Phase 4 unit and integration tests for Multi-Modal AI Validation and Policy Decision Engine."""
 
+import secrets
 from decimal import Decimal
 
 import pytest
@@ -178,7 +179,7 @@ async def test_full_validation_service_orchestration(db_session):
     )
     campaign.escrow.total_funded = Decimal("20.00")
     campaign.escrow.total_available = Decimal("20.00")
-    await campaign_service.activate_campaign(campaign.id, "0x" + "c" * 64)
+    await campaign_service.activate_campaign(campaign.id, f"0x{secrets.token_hex(32)}")
     await db_session.flush()
 
     # Contributor creates submission

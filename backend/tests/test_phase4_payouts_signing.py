@@ -1,5 +1,6 @@
 """Tests for EIP-712 reward voucher signing, recovery, and financial ledger reservation."""
 
+import secrets
 from decimal import Decimal
 
 import pytest
@@ -68,7 +69,7 @@ async def test_eip712_voucher_generation_and_cryptographic_recovery(db_session):
     )
     campaign.escrow.total_funded = Decimal("35.00")
     campaign.escrow.total_available = Decimal("35.00")
-    await campaign_service.activate_campaign(campaign.id, "0x" + "a" * 64)
+    await campaign_service.activate_campaign(campaign.id, f"0x{secrets.token_hex(32)}")
     await db_session.flush()
 
     # Create submission
@@ -183,7 +184,7 @@ async def test_voucher_idempotency_and_revocation(db_session):
     )
     campaign.escrow.total_funded = Decimal("25.00")
     campaign.escrow.total_available = Decimal("25.00")
-    await campaign_service.activate_campaign(campaign.id, "0x" + "b" * 64)
+    await campaign_service.activate_campaign(campaign.id, f"0x{secrets.token_hex(32)}")
     await db_session.flush()
 
     sub = await submission_service.create_draft(
