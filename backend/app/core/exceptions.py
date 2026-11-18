@@ -15,7 +15,7 @@ class DataMintException(HTTPException):
     ):
         super().__init__(
             status_code=status_code,
-            detail={"code": code, "message": detail, "extra": extra or {}},
+            detail={"code": code, "message": detail, "detail": detail, "extra": extra or {}},
         )
 
 

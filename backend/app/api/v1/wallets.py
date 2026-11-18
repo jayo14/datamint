@@ -34,12 +34,14 @@ async def create_link_challenge(
 ) -> NonceResponse:
     """Generate an EIP-4361 challenge specifically bound to link_wallet for this user."""
     auth_service = AuthService(db)
-    return await auth_service.create_nonce(
+    res = await auth_service.create_nonce(
         address=req.address,
         chain_id=req.chain_id,
         action="link_wallet",
         user_id=current_user.id,
     )
+    await db.commit()
+    return res
 
 
 @router.post("/link", response_model=WalletResponse, status_code=status.HTTP_201_CREATED)

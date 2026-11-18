@@ -3,7 +3,7 @@
 import hashlib
 import uuid
 from decimal import Decimal
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,8 +31,16 @@ class CampaignService:
         self.db = db
         self.ledger_service = LedgerService(db)
 
-    async def create_campaign(self, creator_id: uuid.UUID, data: CampaignCreate) -> DatasetCampaign:
+    async def create_campaign(
+        self, creator_id: uuid.UUID, data: Union[CampaignCreate, dict]
+    ) -> DatasetCampaign:
         """Create a new dataset campaign in DRAFT state."""
+        if isinstance(data, dict):
+            data = CampaignCreate(**data)
+
+        if isinstance(creator_id, str):
+            creator_id = uuid.UUID(creator_id)
+
         campaign = DatasetCampaign(
             creator_id=creator_id,
             title=data.title,

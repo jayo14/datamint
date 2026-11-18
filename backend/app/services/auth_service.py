@@ -1,5 +1,6 @@
 """Authentication, session management, and SIWE/password identity service."""
 
+import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
@@ -217,10 +218,10 @@ class AuthService:
         user_id = uuid.UUID(user_id_str)
 
         # Verify session is active and not revoked
-        token_prefix = refresh_token[:64]
+        token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
         session_query = select(AuthSession).where(
             AuthSession.user_id == user_id,
-            AuthSession.refresh_token_hash == token_prefix,
+            AuthSession.refresh_token_hash == token_hash,
             AuthSession.is_revoked.is_(False),
             AuthSession.expires_at > datetime.now(timezone.utc),
         )
@@ -255,10 +256,10 @@ class AuthService:
     async def logout(self, user_id: uuid.UUID, refresh_token: Optional[str] = None) -> None:
         """Revoke user session(s)."""
         if refresh_token:
-            token_prefix = refresh_token[:64]
+            token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
             session_query = select(AuthSession).where(
                 AuthSession.user_id == user_id,
-                AuthSession.refresh_token_hash == token_prefix,
+                AuthSession.refresh_token_hash == token_hash,
             )
             session = (await self.db.execute(session_query)).scalar_one_or_none()
             if session:
@@ -279,9 +280,10 @@ class AuthService:
         self, user: User, capabilities: List[str], primary_wallet: Optional[str]
     ) -> AuthTokenResponse:
         refresh_token = create_refresh_token(str(user.id))
+        token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
         session = AuthSession(
             user_id=user.id,
-            refresh_token_hash=refresh_token[:64],
+            refresh_token_hash=token_hash,
             expires_at=datetime.now(timezone.utc)
             + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         )

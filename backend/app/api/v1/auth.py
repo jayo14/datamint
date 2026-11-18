@@ -66,11 +66,13 @@ async def generate_nonce(
     """Generate an EIP-4361 nonce challenge for wallet signature."""
     await auth_rate_limiter.check(request, key_prefix="auth:nonce")
     service = AuthService(db)
-    return await service.create_nonce(
+    res = await service.create_nonce(
         address=req.address,
         chain_id=req.chain_id,
         action=req.action,
     )
+    await db.commit()
+    return res
 
 
 @router.post("/verify", response_model=AuthTokenResponse, status_code=status.HTTP_200_OK)

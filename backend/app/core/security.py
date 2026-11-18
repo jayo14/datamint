@@ -62,6 +62,7 @@ def create_refresh_token(subject: str, expires_delta: Optional[timedelta] = None
 
     to_encode: Dict[str, Any] = {
         "sub": subject,
+        "jti": secrets.token_hex(16),
         "iat": now.timestamp(),
         "exp": expire.timestamp(),
         "type": "refresh",
