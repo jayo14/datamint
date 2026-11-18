@@ -215,7 +215,14 @@ async def execute_dispatch_outbox_notifications(batch_size: int = 50) -> dict:
                 if ev.topic == "submission.submitted":
                     sub_id_str = ev.payload.get("submission_id")
                     if sub_id_str:
-                        task_run_ai_validation.delay(sub_id_str)
+                        try:
+                            task_run_ai_validation.delay(sub_id_str)
+                        except Exception as exc:
+                            logger.warning(
+                                "Failed to dispatch Celery validation task for %s: %s",
+                                sub_id_str,
+                                exc,
+                            )
                 ev.status = OutboxStatus.PUBLISHED.value
                 dispatched_count += 1
 

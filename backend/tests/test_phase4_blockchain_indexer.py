@@ -1,5 +1,6 @@
 """Tests for blockchain event indexing, deduplication, and financial reconciliation."""
 
+import secrets
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
@@ -255,7 +256,7 @@ async def test_indexer_reorganization_detection_and_orphaned_event_compensation(
             reward_per_submission=Decimal("2.00"),
         ),
     )
-    onchain_cam_id = "0x" + "a" * 64
+    onchain_cam_id = f"0x{secrets.token_hex(32)}"
     campaign.escrow.onchain_campaign_id = onchain_cam_id
     campaign.escrow.total_funded = Decimal("10.00")
     campaign.escrow.total_available = Decimal("10.00")
@@ -376,7 +377,7 @@ async def test_indexer_campaign_cancelled_event(db_session):
             reward_per_submission=Decimal("1.00"),
         ),
     )
-    onchain_cam_id = "0x" + "b" * 64
+    onchain_cam_id = f"0x{secrets.token_hex(32)}"
     campaign.escrow.onchain_campaign_id = onchain_cam_id
     campaign.escrow.total_funded = Decimal("10.00")
     campaign.escrow.total_available = Decimal("10.00")

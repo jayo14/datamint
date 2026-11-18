@@ -1,6 +1,7 @@
 """Tests for human review queue, manual review decisions, and contributor appeals."""
 
 import secrets
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -204,3 +205,79 @@ async def test_rejection_and_appeals_workflow(db_session):
     assert resolved_appeal.reviewer_id == reviewer2.id
     assert resolved_appeal.resolved_at is not None
     assert sub.status == SubmissionStatus.APPROVED.value
+
+
+@pytest.mark.asyncio
+async def test_appeal_deadline_enforcement(db_session):
+    """Verify that appeals submitted past the campaign window or deadline are rejected."""
+    campaign_service = CampaignService(db_session)
+    submission_service = SubmissionService(db_session)
+    review_service = ReviewService(db_session)
+
+    creator = User(email="creator_deadline@datamint.ai")
+    contributor = User(email="contrib_deadline@datamint.ai")
+    reviewer = User(email="reviewer_deadline@datamint.ai")
+    db_session.add_all([creator, contributor, reviewer])
+    await db_session.flush()
+
+    campaign = await campaign_service.create_campaign(
+        creator_id=creator.id,
+        data=CampaignCreate(
+            title="Time-Bound Campaign",
+            description="Strict appeal window",
+            data_type=DataType.TEXT,
+            target_submissions=10,
+            reward_per_submission=Decimal("2.00"),
+            eligibility_criteria={"appeal_window_days": 3},
+        ),
+    )
+    campaign.escrow.total_funded = Decimal("20.00")
+    campaign.escrow.total_available = Decimal("20.00")
+    await campaign_service.activate_campaign(campaign.id, f"0x{secrets.token_hex(32)}")
+    await db_session.flush()
+
+    sub = await submission_service.create_draft(
+        contributor_id=contributor.id,
+        data=SubmissionDraftCreate(
+            campaign_id=campaign.id,
+            draft_data={"text": "Initial text entry"},
+        ),
+    )
+    sub.status = SubmissionStatus.NEEDS_REVIEW.value
+    await db_session.flush()
+
+    # Reject submission
+    await review_service.submit_review_decision(
+        submission_id=sub.id,
+        reviewer_id=reviewer.id,
+        request=ReviewDecisionRequest(
+            decision=ReviewDecision.REJECTED,
+            notes="Does not meet criteria",
+            rejection_reason="Off-topic content",
+        ),
+    )
+
+    # 1. Backdate rejection beyond the 3-day window
+    sub.updated_at = datetime.now(timezone.utc) - timedelta(days=5)
+    await db_session.flush()
+
+    with pytest.raises(DomainRuleViolationException) as excinfo:
+        await review_service.submit_appeal(
+            submission_id=sub.id,
+            contributor_id=contributor.id,
+            request=AppealCreateRequest(reason="Trying to appeal late."),
+        )
+    assert "appeal deadline" in str(excinfo.value.detail).lower()
+
+    # 2. Reset updated_at within 3-day window, but expire campaign deadline
+    sub.updated_at = datetime.now(timezone.utc) - timedelta(hours=2)
+    campaign.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
+    await db_session.flush()
+
+    with pytest.raises(DomainRuleViolationException) as excinfo_camp:
+        await review_service.submit_appeal(
+            submission_id=sub.id,
+            contributor_id=contributor.id,
+            request=AppealCreateRequest(reason="Appeal after campaign closed."),
+        )
+    assert "campaign deadline has passed" in str(excinfo_camp.value.detail).lower()

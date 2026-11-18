@@ -221,3 +221,89 @@ async def test_voucher_idempotency_and_revocation(db_session):
     assert escrow_after_rev.total_reserved == Decimal("0.00")
     assert escrow_after_rev.total_available == Decimal("25.00")
     assert escrow_after_rev.check_invariant() is True
+
+
+@pytest.mark.asyncio
+async def test_payout_fails_without_verified_wallet_or_insufficient_funds(db_session):
+    """Test domain rule enforcement when wallet is missing or escrow capacity is exhausted."""
+    campaign_service = CampaignService(db_session)
+    submission_service = SubmissionService(db_session)
+    ledger_service = LedgerService(db_session)
+
+    test_signer = Account.create()
+    signer_provider = LocalSignerProvider(
+        private_key=test_signer.key.hex(),
+        contract_address="0x" + "4" * 40,
+        chain_id=42220,
+    )
+    payout_service = PayoutSignerService(
+        db=db_session,
+        ledger_service=ledger_service,
+        signer_provider=signer_provider,
+    )
+
+    creator = User(email="creator_walletless@datamint.ai")
+    contributor = User(email="contrib_walletless@datamint.ai")
+    db_session.add_all([creator, contributor])
+    await db_session.flush()
+
+    campaign = await campaign_service.create_campaign(
+        creator_id=creator.id,
+        data=CampaignCreate(
+            title="Short Audio",
+            description="Voice samples",
+            data_type=DataType.VOICE,
+            target_submissions=2,
+            reward_per_submission=Decimal("10.00"),
+        ),
+    )
+    campaign.escrow.total_funded = Decimal("10.00")
+    campaign.escrow.total_available = Decimal("10.00")
+    await campaign_service.activate_campaign(campaign.id, f"0x{secrets.token_hex(32)}")
+    await db_session.flush()
+
+    sub = await submission_service.create_draft(
+        contributor_id=contributor.id,
+        data=SubmissionDraftCreate(
+            campaign_id=campaign.id,
+            draft_data={"audio": "sample.wav"},
+        ),
+    )
+    sub.status = SubmissionStatus.APPROVED.value
+    await db_session.flush()
+
+    # 1. Contributor has no linked wallet -> DomainRuleViolationException
+    with pytest.raises(DomainRuleViolationException) as excinfo:
+        await payout_service.generate_payout_voucher(sub.id)
+    assert "verified wallet" in str(excinfo.value.detail).lower()
+
+    # Link wallet
+    contrib_wallet = Account.create()
+    wallet = Wallet(
+        user_id=contributor.id,
+        address=contrib_wallet.address.lower(),
+        chain_id=42220,
+        is_primary=True,
+    )
+    db_session.add(wallet)
+    await db_session.flush()
+
+    # 2. First voucher consumes 10.00 available -> succeeds
+    payout1 = await payout_service.generate_payout_voucher(sub.id)
+    assert payout1.status == PayoutStatus.AUTHORIZED.value
+
+    # 3. Create second approved submission when available capacity is now 0.00
+    sub2 = await submission_service.create_draft(
+        contributor_id=contributor.id,
+        data=SubmissionDraftCreate(
+            campaign_id=campaign.id,
+            draft_data={"audio": "sample2.wav"},
+        ),
+    )
+    sub2.status = SubmissionStatus.APPROVED.value
+    await db_session.flush()
+
+    from app.core.exceptions import InsufficientFundsException
+
+    with pytest.raises(InsufficientFundsException):
+        await payout_service.generate_payout_voucher(sub2.id)

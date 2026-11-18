@@ -161,3 +161,28 @@ async def test_review_and_appeals_api_flow(async_client: AsyncClient, db_session
     recon_data = resp_recon.json()
     assert recon_data["is_reconciled"] is True
     assert recon_data["invariant_holds"] is True
+
+    # 9. Security: Another user cannot access contributor's payout voucher
+    resp_unauth = await async_client.get(
+        f"/api/v1/payouts/submissions/{sub.id}/voucher",
+        headers={"Authorization": f"Bearer {creator_token}"},
+    )
+    assert resp_unauth.status_code == 403
+
+    # 10. GET /api/v1/notifications -> Contributor receives workflow notifications
+    resp_notifs = await async_client.get(
+        "/api/v1/notifications",
+        headers={"Authorization": f"Bearer {contributor_token}"},
+    )
+    assert resp_notifs.status_code == 200
+    notifs = resp_notifs.json()
+    assert len(notifs) >= 1
+    target_notif_id = notifs[0]["id"]
+
+    # Mark notification read
+    resp_read = await async_client.put(
+        f"/api/v1/notifications/{target_notif_id}/read",
+        headers={"Authorization": f"Bearer {contributor_token}"},
+    )
+    assert resp_read.status_code == 200
+    assert resp_read.json()["is_read"] is True
