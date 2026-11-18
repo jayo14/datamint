@@ -3,8 +3,10 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.exceptions import (
     DataMintException,
     InvalidSignatureException,
@@ -28,9 +30,7 @@ class WalletService:
         result = await self.db.execute(query)
         return [WalletResponse.model_validate(w) for w in result.scalars().all()]
 
-    async def link_wallet(
-        self, user_id: uuid.UUID, message: str, signature: str
-    ) -> WalletResponse:
+    async def link_wallet(self, user_id: uuid.UUID, message: str, signature: str) -> WalletResponse:
         """Verify signature against challenge and link wallet to user account."""
         recovered_address = recover_signer_address(message, signature)
 
@@ -42,7 +42,9 @@ class WalletService:
                 break
 
         if not nonce:
-            raise InvalidSignatureException(detail="Message does not contain a valid EIP-4361 nonce")
+            raise InvalidSignatureException(
+                detail="Message does not contain a valid EIP-4361 nonce"
+            )
 
         # Validate nonce
         challenge_query = select(WalletNonceChallenge).where(
@@ -55,7 +57,9 @@ class WalletService:
             raise InvalidSignatureException(detail="Nonce is invalid, expired, or already used")
 
         if challenge.address.lower() != recovered_address.lower():
-            raise InvalidSignatureException(detail="Signer address does not match challenge target address")
+            raise InvalidSignatureException(
+                detail="Signer address does not match challenge target address"
+            )
 
         if challenge.action != "link_wallet":
             raise DataMintException(detail="Challenge was not issued for wallet linking")

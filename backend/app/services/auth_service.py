@@ -3,9 +3,11 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.core.config import settings
 from app.core.exceptions import (
     DataMintException,
@@ -171,7 +173,9 @@ class AuthService:
                 break
 
         if not nonce:
-            raise InvalidSignatureException(detail="Message does not contain a valid EIP-4361 nonce")
+            raise InvalidSignatureException(
+                detail="Message does not contain a valid EIP-4361 nonce"
+            )
 
         # Validate nonce in DB
         challenge_query = select(WalletNonceChallenge).where(
@@ -196,7 +200,9 @@ class AuthService:
         # Find or create user by wallet address
         user, capabilities = await self._find_or_create_user(recovered_address, challenge.chain_id)
 
-        return await self._create_auth_response(user, capabilities, primary_wallet=recovered_address)
+        return await self._create_auth_response(
+            user, capabilities, primary_wallet=recovered_address
+        )
 
     async def refresh_session(self, refresh_token: str) -> AuthTokenResponse:
         """Rotate refresh token and issue new access token."""
@@ -276,7 +282,8 @@ class AuthService:
         session = AuthSession(
             user_id=user.id,
             refresh_token_hash=refresh_token[:64],
-            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            expires_at=datetime.now(timezone.utc)
+            + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         )
         self.db.add(session)
         await self.db.flush()
