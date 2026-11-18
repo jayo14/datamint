@@ -1,10 +1,8 @@
-"""Wallet schemas."""
+"""Wallet schemas for linking, unlinking, and listing verified user wallets."""
 
 import uuid
 from datetime import datetime
-
 from pydantic import Field
-
 from app.schemas.common import BaseSchema
 
 
@@ -16,8 +14,10 @@ class WalletResponse(BaseSchema):
     verified_at: datetime
 
 
-class ConnectWalletRequest(BaseSchema):
-    message: str = Field(
-        ..., description="EIP-4361 message verifying ownership of the additional wallet"
-    )
+class LinkWalletRequest(BaseSchema):
+    message: str = Field(..., description="EIP-4361 message verifying ownership of the additional wallet")
     signature: str = Field(..., description="Cryptographic signature")
+
+
+class SetPrimaryWalletRequest(BaseSchema):
+    address: str = Field(..., description="Wallet address to set as primary")
