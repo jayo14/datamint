@@ -179,7 +179,7 @@ async def test_security_headers_and_correlation_id(async_client: AsyncClient):
     assert resp.headers.get("X-Request-ID") == custom_request_id
     assert resp.headers.get("X-Content-Type-Options") == "nosniff"
     assert resp.headers.get("X-Frame-Options") == "DENY"
-    assert resp.headers.get("X-XSS-Protection") == "1; mode=block"
+    assert "default-src 'self'" in resp.headers.get("Content-Security-Policy", "")
     assert resp.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
 
 
