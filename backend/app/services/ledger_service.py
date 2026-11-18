@@ -261,3 +261,117 @@ class LedgerService:
         self.db.add(entry)
         await self.db.flush()
         return entry
+
+    async def compensate_claim_reversal(
+        self,
+        campaign_id: uuid.UUID,
+        amount: Decimal,
+        reference_id: str,
+        notes: Optional[str] = None,
+    ) -> LedgerEntry:
+        """Compensating entry reversing an orphaned on-chain claim: moves from claimed back to reserved."""
+        existing_query = select(LedgerEntry).where(LedgerEntry.reference_id == reference_id)
+        existing = (await self.db.execute(existing_query)).scalar_one_or_none()
+        if existing:
+            return existing
+
+        escrow = await self.get_escrow(campaign_id)
+        if escrow.total_claimed < amount:
+            raise FinancialInvariantViolationException(
+                f"Cannot compensate claim of {amount} when total claimed is {escrow.total_claimed}"
+            )
+
+        escrow.total_claimed -= amount
+        escrow.total_reserved += amount
+        self._verify_invariant(escrow)
+
+        entry = LedgerEntry(
+            escrow_campaign_id=escrow.id,
+            entry_type=LedgerEntryType.UNRESERVATION.value,
+            amount=amount,
+            running_available=escrow.total_available,
+            running_reserved=escrow.total_reserved,
+            running_claimed=escrow.total_claimed,
+            running_refunded=escrow.total_refunded,
+            reference_id=reference_id,
+            notes=notes or f"Compensating reversal of orphaned claim ({amount} cUSD)",
+        )
+        self.db.add(entry)
+        await self.db.flush()
+        return entry
+
+    async def compensate_deposit_reversal(
+        self,
+        campaign_id: uuid.UUID,
+        amount: Decimal,
+        reference_id: str,
+        notes: Optional[str] = None,
+    ) -> LedgerEntry:
+        """Compensating entry reversing an orphaned on-chain deposit: reduces funded and available."""
+        existing_query = select(LedgerEntry).where(LedgerEntry.reference_id == reference_id)
+        existing = (await self.db.execute(existing_query)).scalar_one_or_none()
+        if existing:
+            return existing
+
+        escrow = await self.get_escrow(campaign_id)
+        if escrow.total_available < amount or escrow.total_funded < amount:
+            raise FinancialInvariantViolationException(
+                f"Cannot compensate deposit of {amount}: available ({escrow.total_available}) or funded ({escrow.total_funded}) insufficient"
+            )
+
+        escrow.total_funded -= amount
+        escrow.total_available -= amount
+        self._verify_invariant(escrow)
+
+        entry = LedgerEntry(
+            escrow_campaign_id=escrow.id,
+            entry_type=LedgerEntryType.REFUND.value,
+            amount=amount,
+            running_available=escrow.total_available,
+            running_reserved=escrow.total_reserved,
+            running_claimed=escrow.total_claimed,
+            running_refunded=escrow.total_refunded,
+            reference_id=reference_id,
+            notes=notes or f"Compensating reversal of orphaned deposit ({amount} cUSD)",
+        )
+        self.db.add(entry)
+        await self.db.flush()
+        return entry
+
+    async def compensate_refund_reversal(
+        self,
+        campaign_id: uuid.UUID,
+        amount: Decimal,
+        reference_id: str,
+        notes: Optional[str] = None,
+    ) -> LedgerEntry:
+        """Compensating entry reversing an orphaned on-chain refund: moves from refunded back to available."""
+        existing_query = select(LedgerEntry).where(LedgerEntry.reference_id == reference_id)
+        existing = (await self.db.execute(existing_query)).scalar_one_or_none()
+        if existing:
+            return existing
+
+        escrow = await self.get_escrow(campaign_id)
+        if escrow.total_refunded < amount:
+            raise FinancialInvariantViolationException(
+                f"Cannot compensate refund of {amount} when total refunded is {escrow.total_refunded}"
+            )
+
+        escrow.total_refunded -= amount
+        escrow.total_available += amount
+        self._verify_invariant(escrow)
+
+        entry = LedgerEntry(
+            escrow_campaign_id=escrow.id,
+            entry_type=LedgerEntryType.DEPOSIT.value,
+            amount=amount,
+            running_available=escrow.total_available,
+            running_reserved=escrow.total_reserved,
+            running_claimed=escrow.total_claimed,
+            running_refunded=escrow.total_refunded,
+            reference_id=reference_id,
+            notes=notes or f"Compensating reversal of orphaned refund ({amount} cUSD)",
+        )
+        self.db.add(entry)
+        await self.db.flush()
+        return entry

@@ -12,13 +12,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
-from app.models.enums import BlockchainEventStatus, PayoutStatus, SubmissionStatus
+from app.models.campaign import DatasetCampaign
+from app.models.enums import BlockchainEventStatus, CampaignStatus, PayoutStatus, SubmissionStatus
 from app.models.financial import (
     BlockchainEvent,
     EscrowCampaign,
     IndexerSyncState,
     PayoutAuthorization,
 )
+from app.models.notification import Notification
 from app.models.submission import Submission
 from app.services.ledger_service import LedgerService
 
@@ -33,6 +35,7 @@ EVENT_CAMPAIGN_ACTIVATED_SIG = "CampaignActivated(bytes32,uint256)"
 EVENT_REWARD_CLAIMED_SIG = "RewardClaimed(bytes32,address,uint256,bytes32,bytes32)"
 EVENT_CAMPAIGN_REFUNDED_SIG = "CampaignRefunded(bytes32,address,uint256,uint256)"
 EVENT_CAMPAIGN_CLOSED_SIG = "CampaignClosed(bytes32,uint256,uint256)"
+EVENT_CAMPAIGN_CANCELLED_SIG = "CampaignCancelled(bytes32,address,string)"
 
 TOPIC_CAMPAIGN_CREATED = "0x" + keccak(text=EVENT_CAMPAIGN_CREATED_SIG).hex()
 TOPIC_CAMPAIGN_FUNDED = "0x" + keccak(text=EVENT_CAMPAIGN_FUNDED_SIG).hex()
@@ -40,12 +43,15 @@ TOPIC_CAMPAIGN_ACTIVATED = "0x" + keccak(text=EVENT_CAMPAIGN_ACTIVATED_SIG).hex(
 TOPIC_REWARD_CLAIMED = "0x" + keccak(text=EVENT_REWARD_CLAIMED_SIG).hex()
 TOPIC_CAMPAIGN_REFUNDED = "0x" + keccak(text=EVENT_CAMPAIGN_REFUNDED_SIG).hex()
 TOPIC_CAMPAIGN_CLOSED = "0x" + keccak(text=EVENT_CAMPAIGN_CLOSED_SIG).hex()
+TOPIC_CAMPAIGN_CANCELLED = "0x" + keccak(text=EVENT_CAMPAIGN_CANCELLED_SIG).hex()
 
 
 class BlockchainRpcClient(Protocol):
     """Protocol for querying JSON-RPC nodes."""
 
     async def get_latest_block_number(self) -> int: ...
+
+    async def get_block_by_number(self, block_number: int) -> Optional[Dict[str, Any]]: ...
 
     async def get_logs(
         self,
@@ -69,6 +75,19 @@ class HttpRpcClient:
             resp.raise_for_status()
             data = resp.json()
             return int(data["result"], 16)
+
+    async def get_block_by_number(self, block_number: int) -> Optional[Dict[str, Any]]:
+        payload = {
+            "jsonrpc": "2.0",
+            "method": "eth_getBlockByNumber",
+            "params": [hex(block_number), False],
+            "id": 1,
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(self.rpc_url, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("result")
 
     async def get_logs(
         self,
@@ -134,6 +153,9 @@ class BlockchainIndexerService:
 
         Returns (events_indexed_count, last_processed_block).
         """
+        # 1. Detect and compensate for any blockchain reorganizations
+        await self.detect_and_handle_reorg()
+
         sync_state = await self.get_or_create_sync_state()
         from_block = sync_state.last_processed_block + 1
 
@@ -165,6 +187,154 @@ class BlockchainIndexerService:
         await self.db.flush()
 
         return indexed_count, to_block
+
+    async def detect_and_handle_reorg(self) -> bool:
+        """
+        Detect whether previously indexed blocks have been orphaned due to a chain reorganization.
+        If a reorg is detected, mark affected events as ORPHANED, compensate ledger mutations,
+        revert payout/submission statuses, and rewind the last_processed_block.
+        Returns True if a reorg occurred, False otherwise.
+        """
+        recent_events_query = (
+            select(BlockchainEvent)
+            .where(
+                BlockchainEvent.chain_id == self.chain_id,
+                BlockchainEvent.status != BlockchainEventStatus.ORPHANED.value,
+            )
+            .order_by(BlockchainEvent.block_number.desc())
+            .limit(20)
+        )
+        recent_events = (await self.db.execute(recent_events_query)).scalars().all()
+        if not recent_events:
+            return False
+
+        checked_blocks: Dict[int, str] = {}
+        first_diverged_block: Optional[int] = None
+
+        for ev in recent_events:
+            b_num = ev.block_number
+            if b_num not in checked_blocks:
+                if hasattr(self.rpc_client, "get_block_by_number"):
+                    block_info = await self.rpc_client.get_block_by_number(b_num)
+                    if block_info and "hash" in block_info:
+                        checked_blocks[b_num] = block_info["hash"].lower()
+                    else:
+                        continue
+                else:
+                    continue
+
+            canonical_hash = checked_blocks.get(b_num)
+            if canonical_hash and ev.block_hash.lower() != canonical_hash:
+                logger.warning(
+                    "Blockchain reorg detected at block %d: indexed hash %s != canonical hash %s",
+                    b_num,
+                    ev.block_hash,
+                    canonical_hash,
+                )
+                if first_diverged_block is None or b_num < first_diverged_block:
+                    first_diverged_block = b_num
+
+        if first_diverged_block is None:
+            return False
+
+        await self._compensate_orphaned_events(first_diverged_block)
+        return True
+
+    async def _compensate_orphaned_events(self, reorg_block: int) -> int:
+        """Rollback all indexed state mutations from reorg_block onwards."""
+        orphaned_query = (
+            select(BlockchainEvent)
+            .where(
+                BlockchainEvent.chain_id == self.chain_id,
+                BlockchainEvent.block_number >= reorg_block,
+                BlockchainEvent.status != BlockchainEventStatus.ORPHANED.value,
+            )
+            .order_by(BlockchainEvent.block_number.desc(), BlockchainEvent.log_index.desc())
+        )
+        orphaned_events = (await self.db.execute(orphaned_query)).scalars().all()
+        compensated_count = 0
+
+        for ev in orphaned_events:
+            params = ev.parameters or {}
+            tx_hash = ev.transaction_hash
+            log_idx = ev.log_index
+
+            if ev.event_name == "RewardClaimed":
+                nonce = params.get("nonce")
+                amount_cusd = Decimal(str(params.get("amount_cusd", "0")))
+                if nonce and amount_cusd > 0:
+                    payout_query = (
+                        select(PayoutAuthorization)
+                        .where(PayoutAuthorization.nonce == nonce)
+                        .options(
+                            selectinload(PayoutAuthorization.submission).selectinload(
+                                Submission.campaign
+                            )
+                        )
+                    )
+                    payout = (await self.db.execute(payout_query)).scalar_one_or_none()
+                    if payout:
+                        payout.status = PayoutStatus.AUTHORIZED.value
+                        payout.claim_tx_hash = None
+                        payout.claimed_at = None
+                        payout.submission.status = SubmissionStatus.APPROVED.value
+
+                        comp_ref = f"reorg_unclaim_{tx_hash}_{log_idx}"
+                        await self.ledger_service.compensate_claim_reversal(
+                            campaign_id=payout.submission.campaign_id,
+                            amount=amount_cusd,
+                            reference_id=comp_ref,
+                            notes=f"Reorg rollback of orphaned claim {tx_hash}",
+                        )
+
+            elif ev.event_name == "CampaignFunded":
+                campaign_id = params.get("campaignId")
+                amount_cusd = Decimal(str(params.get("amount_cusd", "0")))
+                if campaign_id and amount_cusd > 0:
+                    escrow_query = select(EscrowCampaign).where(
+                        EscrowCampaign.onchain_campaign_id == campaign_id
+                    )
+                    escrow = (await self.db.execute(escrow_query)).scalar_one_or_none()
+                    if escrow:
+                        comp_ref = f"reorg_undep_{tx_hash}_{log_idx}"
+                        await self.ledger_service.compensate_deposit_reversal(
+                            campaign_id=escrow.campaign_id,
+                            amount=amount_cusd,
+                            reference_id=comp_ref,
+                            notes=f"Reorg rollback of orphaned deposit {tx_hash}",
+                        )
+
+            elif ev.event_name == "CampaignRefunded":
+                campaign_id = params.get("campaignId")
+                amount_cusd = Decimal(str(params.get("amount_cusd", "0")))
+                if campaign_id and amount_cusd > 0:
+                    escrow_query = select(EscrowCampaign).where(
+                        EscrowCampaign.onchain_campaign_id == campaign_id
+                    )
+                    escrow = (await self.db.execute(escrow_query)).scalar_one_or_none()
+                    if escrow:
+                        comp_ref = f"reorg_unref_{tx_hash}_{log_idx}"
+                        await self.ledger_service.compensate_refund_reversal(
+                            campaign_id=escrow.campaign_id,
+                            amount=amount_cusd,
+                            reference_id=comp_ref,
+                            notes=f"Reorg rollback of orphaned refund {tx_hash}",
+                        )
+
+            ev.status = BlockchainEventStatus.ORPHANED.value
+            compensated_count += 1
+
+        sync_state = await self.get_or_create_sync_state()
+        sync_state.last_processed_block = max(0, reorg_block - 1)
+        sync_state.last_sync_timestamp = datetime.now(timezone.utc)
+        await self.db.flush()
+
+        logger.info(
+            "Reorg compensation complete: %d events orphaned, cursor rewound to block %d",
+            compensated_count,
+            sync_state.last_processed_block,
+        )
+        return compensated_count
 
     async def _process_log(self, log: Dict[str, Any], current_safe_block: int) -> bool:
         """Parse raw log, perform idempotency checks, and trigger financial updates."""
@@ -280,10 +450,30 @@ class BlockchainIndexerService:
             campaign_id = topics[1] if len(topics) > 1 else None
             parameters = {"campaignId": campaign_id}
 
+        elif topic0 == TOPIC_CAMPAIGN_CANCELLED.lower():
+            event_name = "CampaignCancelled"
+            campaign_id = topics[1] if len(topics) > 1 else None
+            account = "0x" + topics[2][-40:] if len(topics) > 2 else None
+            parameters = {"campaignId": campaign_id, "account": account}
+
+            if is_confirmed and campaign_id:
+                await self._handle_campaign_cancelled(
+                    campaign_id=campaign_id,
+                    tx_hash=tx_hash,
+                    log_index=log_index,
+                )
+
         elif topic0 == TOPIC_CAMPAIGN_CLOSED.lower():
             event_name = "CampaignClosed"
             campaign_id = topics[1] if len(topics) > 1 else None
             parameters = {"campaignId": campaign_id}
+
+            if is_confirmed and campaign_id:
+                await self._handle_campaign_closed(
+                    campaign_id=campaign_id,
+                    tx_hash=tx_hash,
+                    log_index=log_index,
+                )
 
         event = BlockchainEvent(
             chain_id=self.chain_id,
@@ -309,8 +499,10 @@ class BlockchainIndexerService:
         self, campaign_id: str, amount: Decimal, tx_hash: str, log_index: int
     ) -> None:
         """Record on-chain deposit event in the double-entry financial ledger."""
-        escrow_query = select(EscrowCampaign).where(
-            EscrowCampaign.onchain_campaign_id == campaign_id
+        escrow_query = (
+            select(EscrowCampaign)
+            .where(EscrowCampaign.onchain_campaign_id == campaign_id)
+            .options(selectinload(EscrowCampaign.campaign))
         )
         escrow = (await self.db.execute(escrow_query)).scalar_one_or_none()
         if escrow:
@@ -322,6 +514,19 @@ class BlockchainIndexerService:
                 onchain_campaign_id=campaign_id,
                 notes=f"Confirmed on-chain deposit tx {tx_hash}",
             )
+            if escrow.campaign:
+                notif = Notification(
+                    user_id=escrow.campaign.creator_id,
+                    event_type="CAMPAIGN_FUNDING_CONFIRMED",
+                    title="Campaign Funding Confirmed",
+                    message=f"Funding of {amount} cUSD confirmed on Celo for campaign '{escrow.campaign.title}'.",
+                    data_json={
+                        "campaign_id": str(escrow.campaign_id),
+                        "amount": str(amount),
+                        "tx_hash": tx_hash,
+                    },
+                )
+                self.db.add(notif)
 
     async def _handle_reward_claimed(
         self, nonce: str, amount: Decimal, tx_hash: str, log_index: int
@@ -349,6 +554,22 @@ class BlockchainIndexerService:
                 notes=f"Confirmed on-chain claim tx {tx_hash} (nonce {nonce})",
             )
 
+            campaign_title = (
+                submission.campaign.title if submission.campaign else "campaign"
+            )
+            notif = Notification(
+                user_id=payout.contributor_id,
+                event_type="REWARD_CLAIM_CONFIRMED",
+                title="Reward Claim Settled On-Chain",
+                message=f"Your reward claim of {amount} cUSD for {campaign_title} has settled on-chain.",
+                data_json={
+                    "submission_id": str(submission.id),
+                    "amount": str(amount),
+                    "tx_hash": tx_hash,
+                },
+            )
+            self.db.add(notif)
+
     async def _handle_campaign_refunded(
         self, campaign_id: str, amount: Decimal, tx_hash: str, log_index: int
     ) -> None:
@@ -365,3 +586,47 @@ class BlockchainIndexerService:
                 reference_id=reference_id,
                 notes=f"Confirmed on-chain refund tx {tx_hash}",
             )
+
+    async def _handle_campaign_cancelled(
+        self, campaign_id: str, tx_hash: str, log_index: int
+    ) -> None:
+        """Update campaign status upon confirmed on-chain cancellation."""
+        query = (
+            select(EscrowCampaign)
+            .where(EscrowCampaign.onchain_campaign_id == campaign_id)
+            .options(selectinload(EscrowCampaign.campaign))
+        )
+        escrow = (await self.db.execute(query)).scalar_one_or_none()
+        if escrow and escrow.campaign:
+            escrow.campaign.status = CampaignStatus.CANCELLED.value
+            escrow.status = "CANCELLED"
+            notif = Notification(
+                user_id=escrow.campaign.creator_id,
+                event_type="CAMPAIGN_CANCELLED",
+                title="Campaign Cancelled On-Chain",
+                message=f"Campaign '{escrow.campaign.title}' has been cancelled on-chain in tx {tx_hash}.",
+                data_json={"campaign_id": str(escrow.campaign.id), "tx_hash": tx_hash},
+            )
+            self.db.add(notif)
+
+    async def _handle_campaign_closed(
+        self, campaign_id: str, tx_hash: str, log_index: int
+    ) -> None:
+        """Update campaign status upon final closure."""
+        query = (
+            select(EscrowCampaign)
+            .where(EscrowCampaign.onchain_campaign_id == campaign_id)
+            .options(selectinload(EscrowCampaign.campaign))
+        )
+        escrow = (await self.db.execute(query)).scalar_one_or_none()
+        if escrow and escrow.campaign:
+            escrow.campaign.status = CampaignStatus.COMPLETED.value
+            escrow.status = "CLOSED"
+            notif = Notification(
+                user_id=escrow.campaign.creator_id,
+                event_type="CAMPAIGN_COMPLETED",
+                title="Campaign Closed On-Chain",
+                message=f"Campaign '{escrow.campaign.title}' has finalized and closed on-chain.",
+                data_json={"campaign_id": str(escrow.campaign.id), "tx_hash": tx_hash},
+            )
+            self.db.add(notif)
