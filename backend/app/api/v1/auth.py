@@ -1,5 +1,7 @@
 """Authentication API endpoints (EIP-4361 SIWE and Email/Password)."""
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,6 +77,26 @@ async def generate_nonce(
     return res
 
 
+@router.get("/siwe-challenge", response_model=NonceResponse, status_code=status.HTTP_200_OK)
+async def get_siwe_challenge(
+    address: str,
+    request: Request,
+    chain_id: Optional[int] = 42220,
+    action: Optional[str] = "login",
+    db: AsyncSession = Depends(get_db),
+) -> NonceResponse:
+    """Generate an EIP-4361 nonce challenge via GET for client convenience."""
+    await auth_rate_limiter.check(request, key_prefix="auth:nonce")
+    service = AuthService(db)
+    res = await service.create_nonce(
+        address=address,
+        chain_id=chain_id or 42220,
+        action=action or "login",
+    )
+    await db.commit()
+    return res
+
+
 @router.post("/verify", response_model=AuthTokenResponse, status_code=status.HTTP_200_OK)
 async def verify_signature(
     req: VerifySignatureRequest,
@@ -89,6 +111,16 @@ async def verify_signature(
     )
     await db.commit()
     return token_response
+
+
+@router.post("/siwe-verify", response_model=AuthTokenResponse, status_code=status.HTTP_200_OK)
+async def verify_siwe(
+    req: VerifySignatureRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> AuthTokenResponse:
+    """Verify signed EIP-4361 message alias."""
+    return await verify_signature(req=req, request=request, db=db)
 
 
 @router.post("/refresh", response_model=AuthTokenResponse, status_code=status.HTTP_200_OK)

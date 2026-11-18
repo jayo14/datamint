@@ -15,6 +15,7 @@ from app.services.campaign_service import CampaignService
 router = APIRouter(prefix="/marketplace", tags=["Marketplace"])
 
 
+@router.get("", response_model=PaginatedResponse[CampaignResponse], status_code=status.HTTP_200_OK)
 @router.get(
     "/tasks", response_model=PaginatedResponse[CampaignResponse], status_code=status.HTTP_200_OK
 )
@@ -54,3 +55,15 @@ async def list_tasks(
         page_size=page_size,
         total_pages=total_pages,
     )
+
+
+@router.get("/{campaign_id}", response_model=CampaignResponse, status_code=status.HTTP_200_OK)
+async def get_marketplace_campaign(
+    campaign_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> CampaignResponse:
+    """Get active campaign details by ID."""
+    import uuid
+    service = CampaignService(db)
+    campaign = await service.get_campaign(uuid.UUID(campaign_id))
+    return CampaignResponse.model_validate(campaign)

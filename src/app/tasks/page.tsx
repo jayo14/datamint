@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { api, type Campaign } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Coins, Zap, Upload, Sparkles, Filter, Search, ArrowRight } from 'lucide-react'
 
 interface Task {
-  id: number;
+  id: number | string;
   title: string;
   type: 'text' | 'voice' | 'image';
   reward_per_task: number;
@@ -32,6 +33,27 @@ export default function Tasks() {
   const supabase = createClient()
 
   const fetchTasks = useCallback(async () => {
+    try {
+      // First attempt: fetch from FastAPI backend marketplace
+      const res = await api.listMarketplace()
+      if (res && res.items && res.items.length > 0) {
+        const backendTasks: Task[] = res.items.map((c: Campaign) => ({
+          id: c.id,
+          title: c.title,
+          type: (c.data_type.toLowerCase() as 'text' | 'voice' | 'image'),
+          reward_per_task: typeof c.reward_per_submission === 'string' ? parseFloat(c.reward_per_submission) : c.reward_per_submission,
+          total_required: c.target_submissions,
+          completed_count: c.current_submissions,
+          status: c.status.toLowerCase(),
+        }))
+        setTasks(backendTasks)
+        setLoading(false)
+        return
+      }
+    } catch {
+      // Fallback to supabase datasets
+    }
+
     const { data } = await supabase
       .from('datasets')
       .select('*')
@@ -45,14 +67,34 @@ export default function Tasks() {
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
-        const { data } = await supabase
-          .from('datasets')
-          .select('*')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
+      try {
+        const res = await api.listMarketplace()
+        if (res && res.items && res.items.length > 0 && isMounted) {
+          const backendTasks: Task[] = res.items.map((c: Campaign) => ({
+            id: c.id,
+            title: c.title,
+            type: (c.data_type.toLowerCase() as 'text' | 'voice' | 'image'),
+            reward_per_task: typeof c.reward_per_submission === 'string' ? parseFloat(c.reward_per_submission) : c.reward_per_submission,
+            total_required: c.target_submissions,
+            completed_count: c.current_submissions,
+            status: c.status.toLowerCase(),
+          }))
+          setTasks(backendTasks)
+          setLoading(false)
+          return
+        }
+      } catch {
+        // Fallback to supabase
+      }
 
-        if (data && isMounted) setTasks(data as Task[])
-        if (isMounted) setLoading(false)
+      const { data } = await supabase
+        .from('datasets')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+
+      if (data && isMounted) setTasks(data as Task[])
+      if (isMounted) setLoading(false)
     }
     load()
     return () => { isMounted = false };
@@ -63,6 +105,34 @@ export default function Tasks() {
     setSubmitting(true)
 
     try {
+      // If backend campaign UUID, submit through FastAPI backend validation pipeline
+      if (typeof selectedTask.id === 'string') {
+        const draft = await api.createSubmissionDraft(selectedTask.id, { text: content })
+        if (selectedTask.type !== 'text' && file) {
+          const uploadRes = await api.requestMediaUploadUrl(draft.id, {
+            filename: file.name,
+            mime_type: file.type || (selectedTask.type === 'voice' ? 'audio/wav' : 'image/jpeg'),
+            byte_size: file.size,
+            asset_type: selectedTask.type === 'voice' ? 'AUDIO' : 'IMAGE',
+          })
+          await fetch(uploadRes.upload_url, {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type },
+            body: file,
+          })
+          if (draft.assets && draft.assets.length > 0) {
+            await api.confirmMediaUpload(draft.id, draft.assets[0].id)
+          }
+        }
+        await api.submitForValidation(draft.id)
+        alert("Submission received! DataMint AI validation engine is evaluating your data. Voucher will be authorized upon approval.")
+        setSelectedTask(null)
+        setContent('')
+        setFile(null)
+        fetchTasks()
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Not authenticated")
 

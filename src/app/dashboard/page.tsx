@@ -3,6 +3,7 @@ import Link from "next/link"
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { api, type Campaign } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -14,13 +15,13 @@ import { ethers, type Signer, type Eip1193Provider } from 'ethers'
 import { Plus, Database, Wallet, CheckCircle2, BarChart3, ArrowUpRight, ShieldCheck } from 'lucide-react'
 
 interface Dataset {
-  id: number;
+  id: number | string;
   title: string;
   type: string;
   reward_per_task: number;
   total_required: number;
   completed_count: number;
-  status: 'draft' | 'active' | 'completed';
+  status: 'draft' | 'active' | 'completed' | string;
 }
 
 interface WindowWithEthereum extends Window {
@@ -34,10 +35,30 @@ export default function Dashboard() {
   const [type, setType] = useState('text')
   const [reward, setReward] = useState('0.1')
   const [total, setTotal] = useState('100')
-  const [fundingId, setFundingId] = useState<number | null>(null)
+  const [fundingId, setFundingId] = useState<number | string | null>(null)
   const supabase = createClient()
 
   const fetchDatasets = useCallback(async () => {
+    try {
+      const res = await api.getMyCampaigns()
+      if (res && res.items && res.items.length > 0) {
+        const backendDatasets: Dataset[] = res.items.map((c: Campaign) => ({
+          id: c.id,
+          title: c.title,
+          type: c.data_type.toLowerCase(),
+          reward_per_task: typeof c.reward_per_submission === 'string' ? parseFloat(c.reward_per_submission) : c.reward_per_submission,
+          total_required: c.target_submissions,
+          completed_count: c.current_submissions,
+          status: c.status.toLowerCase(),
+        }))
+        setDatasets(backendDatasets)
+        setLoading(false)
+        return
+      }
+    } catch {
+      // Fallback to supabase
+    }
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
@@ -56,19 +77,39 @@ export default function Dashboard() {
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        if (!authUser || !isMounted) return
-
-        const { data } = await supabase
-          .from('datasets')
-          .select('*')
-          .eq('creator_id', authUser.id)
-          .order('created_at', { ascending: false })
-
-        if (data && isMounted) {
-            setDatasets(data as Dataset[])
+      try {
+        const res = await api.getMyCampaigns()
+        if (res && res.items && res.items.length > 0 && isMounted) {
+          const backendDatasets: Dataset[] = res.items.map((c: Campaign) => ({
+            id: c.id,
+            title: c.title,
+            type: c.data_type.toLowerCase(),
+            reward_per_task: typeof c.reward_per_submission === 'string' ? parseFloat(c.reward_per_submission) : c.reward_per_submission,
+            total_required: c.target_submissions,
+            completed_count: c.current_submissions,
+            status: c.status.toLowerCase(),
+          }))
+          setDatasets(backendDatasets)
+          setLoading(false)
+          return
         }
-        if (isMounted) setLoading(false)
+      } catch {
+        // Fallback
+      }
+
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser || !isMounted) return
+
+      const { data } = await supabase
+        .from('datasets')
+        .select('*')
+        .eq('creator_id', authUser.id)
+        .order('created_at', { ascending: false })
+
+      if (data && isMounted) {
+          setDatasets(data as Dataset[])
+      }
+      if (isMounted) setLoading(false)
     }
     load()
     return () => { isMounted = false };
@@ -76,6 +117,27 @@ export default function Dashboard() {
 
   const handleCreateDataset = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // First attempt creating campaign in FastAPI backend
+    try {
+      const created = await api.createCampaign({
+        title,
+        description: `Campaign for ${title}`,
+        instructions: `Please provide high-quality ${type} data.`,
+        data_type: (type.toUpperCase() as 'TEXT' | 'VOICE' | 'IMAGE'),
+        reward_per_submission: parseFloat(reward),
+        target_submissions: parseInt(total),
+      })
+      if (created) {
+        setTitle('')
+        fetchDatasets()
+        alert("Dataset campaign created successfully on backend!")
+        return
+      }
+    } catch {
+      // Fallback to supabase
+    }
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
@@ -110,29 +172,37 @@ export default function Dashboard() {
       const provider = new ethers.BrowserProvider(win.ethereum)
       const signer: Signer = await provider.getSigner()
 
+      if (typeof dataset.id === 'string') {
+        const fundingParams = await api.submitCampaignForFunding(dataset.id)
+        alert(`Campaign parameters ready for on-chain escrow: ${fundingParams.onchain_params.campaign_id_bytes32}. Please confirm in your connected wallet.`)
+      }
+
+      const numericId = typeof dataset.id === 'number' ? dataset.id : 1;
       const txHash = await fundDatasetOnChain(
         signer,
-        dataset.id,
+        numericId,
         dataset.reward_per_task,
         dataset.total_required
       )
 
       if (txHash) {
-        await supabase
-          .from('datasets')
-          .update({ status: 'active' })
-          .eq('id', dataset.id)
+        if (typeof dataset.id === 'number') {
+          await supabase
+            .from('datasets')
+            .update({ status: 'active' })
+            .eq('id', dataset.id)
 
-        await supabase
-          .from('payments')
-          .insert({
-            dataset_id: dataset.id,
-            amount: dataset.reward_per_task * dataset.total_required,
-            tx_hash: txHash,
-            wallet_address: await signer.getAddress()
-          })
-
+          await supabase
+            .from('payments')
+            .insert({
+              dataset_id: dataset.id,
+              amount: dataset.reward_per_task * dataset.total_required,
+              tx_hash: txHash,
+              wallet_address: await signer.getAddress()
+            })
+        }
         fetchDatasets()
+        alert(`Funding successful! Transaction Hash: ${txHash}`)
       }
     } catch (error: unknown) {
       console.error(error)

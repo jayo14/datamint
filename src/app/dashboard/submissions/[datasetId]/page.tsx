@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, use } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { api, type SubmissionDetails } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,13 +11,13 @@ import { useWeb3 } from '@/hooks/useWeb3'
 import { releasePayment } from '@/lib/blockchain'
 
 interface Submission {
-  id: number
+  id: number | string
   user_id: string
   file_url: string | null
   content: string | null
   ai_score: number | null
   ai_feedback: string | null
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'rejected' | string
   created_at: string
   users?: { wallet_address: string | null }
 }
@@ -26,11 +27,47 @@ export default function SubmissionsPage({ params }: { params: Promise<{ datasetI
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [dataset, setDataset] = useState<{ title: string; reward_per_task: number } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [payingId, setPayingId] = useState<number | null>(null)
+  const [payingId, setPayingId] = useState<number | string | null>(null)
   const supabase = createClient()
   const { signer } = useWeb3()
 
   const fetchSubmissions = useCallback(async () => {
+    try {
+      // If datasetId is a UUID from backend
+      const [backendCampaign, backendSubs] = await Promise.all([
+        api.getCampaign(datasetId),
+        api.getCampaignSubmissions(datasetId),
+      ]);
+      if (backendCampaign) {
+        setDataset({
+          title: backendCampaign.title,
+          reward_per_task: typeof backendCampaign.reward_per_submission === 'string'
+            ? parseFloat(backendCampaign.reward_per_submission)
+            : backendCampaign.reward_per_submission,
+        });
+      }
+      if (backendSubs && backendSubs.items) {
+        const mappedSubs: Submission[] = backendSubs.items.map((s: SubmissionDetails) => {
+          const latestRun = s.validation_runs?.[s.validation_runs.length - 1];
+          return {
+            id: s.id,
+            user_id: s.contributor_id,
+            file_url: s.assets?.[0]?.storage_key || null,
+            content: s.content_payload ? JSON.stringify(s.content_payload) : null,
+            ai_score: latestRun?.score ?? null,
+            ai_feedback: latestRun?.findings?.map((f) => f.message).join('; ') || null,
+            status: s.status.toLowerCase(),
+            created_at: s.created_at,
+          };
+        });
+        setSubmissions(mappedSubs);
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // Fallback to supabase
+    }
+
     const [{ data: ds }, { data: subs }] = await Promise.all([
       supabase.from('datasets').select('title, reward_per_task').eq('id', datasetId).single(),
       supabase.from('submissions').select('*, users(wallet_address)').eq('dataset_id', datasetId).order('created_at', { ascending: false })
@@ -69,17 +106,20 @@ export default function SubmissionsPage({ params }: { params: Promise<{ datasetI
       const contributorWallet = submission.users?.wallet_address
       if (!contributorWallet) throw new Error('Contributor has no wallet address on file')
 
-      const txHash = await releasePayment(signer, Number(datasetId), contributorWallet)
+      const numericId = isNaN(Number(datasetId)) ? 1 : Number(datasetId);
+      const txHash = await releasePayment(signer, numericId, contributorWallet)
 
-      await supabase.from('payments').insert({
-        submission_id: submission.id,
-        dataset_id: Number(datasetId),
-        wallet_address: contributorWallet,
-        amount: dataset?.reward_per_task || 0,
-        tx_hash: txHash
-      })
+      if (!isNaN(Number(datasetId))) {
+        await supabase.from('payments').insert({
+          submission_id: Number(submission.id),
+          dataset_id: numericId,
+          wallet_address: contributorWallet,
+          amount: dataset?.reward_per_task || 0,
+          tx_hash: txHash
+        })
 
-      await supabase.from('submissions').update({ status: 'approved' }).eq('id', submission.id)
+        await supabase.from('submissions').update({ status: 'approved' }).eq('id', submission.id)
+      }
 
       void fetchSubmissions()
       alert(`Paid! Tx: ${txHash}`)

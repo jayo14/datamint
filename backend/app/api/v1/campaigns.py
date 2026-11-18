@@ -22,7 +22,9 @@ from app.services.campaign_service import CampaignService
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 
 
+@router.post("", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/draft", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
 async def create_campaign(
     payload: CampaignCreate,
     current_user: User = Depends(require_capability(CapabilityType.CREATOR)),
@@ -36,6 +38,7 @@ async def create_campaign(
 
 
 @router.put("/{campaign_id}", response_model=CampaignResponse, status_code=status.HTTP_200_OK)
+@router.put("/drafts/{campaign_id}", response_model=CampaignResponse, status_code=status.HTTP_200_OK)
 async def update_campaign_draft(
     campaign_id: uuid.UUID,
     payload: CampaignUpdateDraft,
@@ -55,6 +58,16 @@ async def update_campaign_draft(
 
 @router.post(
     "/{campaign_id}/submit-funding",
+    response_model=FundingParametersResponse,
+    status_code=status.HTTP_200_OK,
+)
+@router.post(
+    "/{campaign_id}/publish",
+    response_model=FundingParametersResponse,
+    status_code=status.HTTP_200_OK,
+)
+@router.post(
+    "/drafts/{campaign_id}/publish",
     response_model=FundingParametersResponse,
     status_code=status.HTTP_200_OK,
 )

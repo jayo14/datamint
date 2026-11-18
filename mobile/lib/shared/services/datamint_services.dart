@@ -144,7 +144,7 @@ class MarketplaceService {
   }
 
   Future<CampaignModel> getCampaignDetails(String id) async {
-    final response = await apiClient.get('/marketplace/$id');
+    final response = await apiClient.get('/campaigns/$id');
     return CampaignModel.fromJson(response.data as Map<String, dynamic>);
   }
 }
