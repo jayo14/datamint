@@ -167,7 +167,10 @@ class ValidationRun(Base):
 
     submission: Mapped["Submission"] = relationship("Submission", back_populates="validation_runs")
     findings: Mapped[List["ValidationFinding"]] = relationship(
-        "ValidationFinding", back_populates="validation_run", cascade="all, delete-orphan"
+        "ValidationFinding",
+        back_populates="validation_run",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
 
