@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
+import { AppShell } from "@/components/layout/AppShell";
 import { Web3Provider } from "@/hooks/useWeb3";
 
 const inter = Inter({
@@ -27,14 +27,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${inter.variable} ${bricolageGrotesque.variable}`}>
       <body className={`${inter.className} min-h-screen bg-background font-sans antialiased`}>
         <Web3Provider>
-          <div className="relative flex min-h-screen flex-col">
-            <Navbar />
-            <main className="flex-1">
-              <div className="container py-6 mx-auto">
-                {children}
-              </div>
-            </main>
-          </div>
+          <AppShell>
+            {children}
+          </AppShell>
         </Web3Provider>
       </body>
     </html>
