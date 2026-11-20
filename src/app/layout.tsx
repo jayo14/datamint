@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
+import "./landing.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { Web3Provider } from "@/hooks/useWeb3";
 

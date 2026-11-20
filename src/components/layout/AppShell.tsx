@@ -10,8 +10,9 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
   const isLanding = pathname === '/'
+  const isAuth = pathname === '/login' || pathname === '/onboarding' || pathname.startsWith('/auth')
 
-  if (isLanding) {
+  if (isLanding || isAuth) {
     return <main className="min-h-screen w-full">{children}</main>
   }
 
