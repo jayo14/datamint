@@ -12,8 +12,6 @@ volumes:
     driver: local
   redis_prod_data:
     driver: local
-  media_storage_data:
-    driver: local
 
 services:
   # ----------------------------------------------------------------------------
@@ -23,6 +21,8 @@ services:
     image: postgres:16-alpine
     container_name: datamint-postgres-prod
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-datamint_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required}
@@ -44,6 +44,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   # ----------------------------------------------------------------------------
   # Redis 7 In-Memory Cache and Task Broker
@@ -52,6 +57,8 @@ services:
     image: redis:7-alpine
     container_name: datamint-redis-prod
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Redis password required}"]
     volumes:
       - redis_prod_data:/data
@@ -67,9 +74,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
 
   # ----------------------------------------------------------------------------
-  # DataMint FastAPI Modular Monolith Backend
+  # DataMint FastAPI Modular Monolith Backend API
   # ----------------------------------------------------------------------------
   backend:
     build:
@@ -77,10 +89,14 @@ services:
       dockerfile: Dockerfile
     container_name: datamint-backend-prod
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "8000:8000"
     environment:
       - ENVIRONMENT=production
+      - RUN_MIGRATIONS=true
+      - WORKERS=${WORKERS:-4}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-datamint_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-datamint_prod}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:?Production JWT secret required}
@@ -108,10 +124,15 @@ services:
           cpus: "0.5"
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/readyz"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/healthz"]
       interval: 15s
       timeout: 5s
       retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   # ----------------------------------------------------------------------------
   # Celery Asynchronous Task Worker
@@ -122,6 +143,8 @@ services:
       dockerfile: Dockerfile.worker
     container_name: datamint-worker-prod
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
     environment:
       - ENVIRONMENT=production
@@ -144,6 +167,11 @@ services:
         limits:
           cpus: "2.0"
           memory: 2048M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   # ----------------------------------------------------------------------------
   # Celery Beat Periodic Scheduler (Blockchain Sync, Stale Cleanup, Reconciliation)
@@ -154,6 +182,8 @@ services:
       dockerfile: Dockerfile.worker
     container_name: datamint-beat-prod
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info"]
     environment:
       - ENVIRONMENT=production
@@ -176,3 +206,8 @@ services:
         limits:
           cpus: "0.5"
           memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
