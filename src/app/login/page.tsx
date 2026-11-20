@@ -7,12 +7,25 @@ import { AuthContainer } from '@/components/auth/AuthContainer'
 import { RoleSelector, type UserRole } from '@/components/auth/RoleSelector'
 import { WalletAuthButton } from '@/components/auth/WalletAuthButton'
 import { EmailAuthForm } from '@/components/auth/EmailAuthForm'
+import { AuthFeedbackModal, type ModalType } from '@/components/auth/AuthFeedbackModal'
 
 export default function Login() {
   const [role, setRole] = useState<UserRole>('contributor')
   const [sentEmail, setSentEmail] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [walletSuccessMessage, setWalletSuccessMessage] = useState<string | null>(null)
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean
+    type: ModalType
+    title: string
+    message: string
+    subMessage?: string
+  }>({
+    isOpen: false,
+    type: 'success',
+    title: '',
+    message: '',
+  })
 
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole)
@@ -25,17 +38,38 @@ export default function Login() {
     setErrorMessage(null)
     setWalletSuccessMessage(null)
     setSentEmail(email)
+    setModalState({
+      isOpen: true,
+      type: 'success',
+      title: 'Magic Link Sent',
+      message: `We've emailed a passwordless sign-in link to ${email}.`,
+      subMessage: 'Click the link in the message to instantly access your account.',
+    })
   }
 
   const handleWalletSuccess = (msg: string) => {
     setErrorMessage(null)
     setSentEmail(null)
     setWalletSuccessMessage(msg)
+    setModalState({
+      isOpen: true,
+      type: 'wallet',
+      title: 'Wallet Linked',
+      message: 'Your Web3 account has been linked to the DataMint protocol.',
+      subMessage: msg,
+    })
   }
 
   const handleError = (msg: string) => {
     setWalletSuccessMessage(null)
     setErrorMessage(msg)
+    setModalState({
+      isOpen: true,
+      type: 'error',
+      title: 'Authentication Error',
+      message: msg,
+      subMessage: 'Please verify your credentials or wallet connection and try again.',
+    })
   }
 
   return (
@@ -171,6 +205,15 @@ export default function Login() {
           </div>
         </div>
       </AuthContainer>
+
+      <AuthFeedbackModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        type={modalState.type}
+        title={modalState.title}
+        message={modalState.message}
+        subMessage={modalState.subMessage}
+      />
     </div>
   )
 }
