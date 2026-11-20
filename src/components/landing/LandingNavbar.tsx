@@ -9,7 +9,11 @@ export function LandingNavbar() {
   const progRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
-    // Fallback scroll progress indicator for browsers without CSS scroll-timeline
+    // Fallback scroll progress indicator for browsers without CSS animation-timeline
+    if (typeof CSS !== 'undefined' && CSS.supports && CSS.supports('animation-timeline', 'scroll()')) {
+      return
+    }
+
     const updateProgress = () => {
       if (!progRef.current) return
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight
@@ -29,23 +33,23 @@ export function LandingNavbar() {
     <div className="nav">
       <i ref={progRef} className="prog" aria-hidden="true" />
       <div>
-        <Link className="lg" href="/">
-          <i>D</i>
-          <span>datamint</span>
+        <Link className="lg" href="#">
+          <i>D</i>datamint
         </Link>
         <nav className="pill" aria-label="Primary">
           <a href="#how">How it works</a>
           <a href="#escrow">Escrow</a>
           <a href="#data">Datasets</a>
-          <a href="#start">Start</a>
+          <a href="#try">Try it</a>
         </nav>
         <div style={{ display: 'flex', gap: '10px', pointerEvents: 'none' }}>
           {isConnected ? (
             <button
               type="button"
               className="btn w2"
-              style={{ height: '52px', padding: '0 24px', fontSize: '15px' }}
+              style={{ height: '52px', padding: '0 24px', fontSize: '15px', cursor: 'pointer' }}
             >
+              <span className="ms" aria-hidden="true">account_balance_wallet</span>
               {truncateAddress(address!)}
             </button>
           ) : (
@@ -54,8 +58,9 @@ export function LandingNavbar() {
               className="btn w2"
               onClick={connect}
               disabled={isConnecting}
-              style={{ height: '52px', padding: '0 24px', fontSize: '15px' }}
+              style={{ height: '52px', padding: '0 24px', fontSize: '15px', cursor: 'pointer' }}
             >
+              <span className="ms" aria-hidden="true">account_balance_wallet</span>
               {isConnecting ? 'Connecting...' : 'Connect wallet'}
             </button>
           )}
@@ -64,6 +69,7 @@ export function LandingNavbar() {
             href="/login"
             style={{ height: '52px', padding: '0 24px', fontSize: '15px' }}
           >
+            <span className="ms" aria-hidden="true">login</span>
             Sign in
           </Link>
         </div>
@@ -71,3 +77,4 @@ export function LandingNavbar() {
     </div>
   )
 }
+
