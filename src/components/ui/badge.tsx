@@ -5,21 +5,36 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "group/badge inline-flex w-fit shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 text-[0.625rem] font-semibold tracking-widest whitespace-nowrap uppercase transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-0 has-data-[icon=inline-start]:pl-0 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
+  "inline-flex w-fit shrink-0 items-center justify-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap transition-colors border",
   {
     variants: {
       variant: {
-        default: "text-foreground [a]:hover:text-foreground/70",
-        secondary: "text-muted-foreground [a]:hover:text-foreground",
+        default:
+          "bg-[#74E3B6] text-[#0D1F18] border-[#5fd4a5] font-bold shadow-xs",
+        secondary:
+          "bg-[#EAFBF3] text-[#0D1F18] border-[#BFE3D2]",
+        outline:
+          "border-[#BFE3D2] bg-white text-[#3F5F52]",
+        mint:
+          "bg-[#74E3B6]/25 text-[#0B9E6B] border-[#74E3B6] font-bold",
+        success:
+          "bg-emerald-50 text-emerald-800 border-emerald-200 font-medium",
+        warning:
+          "bg-amber-50 text-amber-800 border-amber-200 font-medium",
         destructive:
-          "text-destructive focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:text-destructive/70",
-        outline: "text-foreground [a]:hover:text-foreground/70",
-        ghost: "text-muted-foreground hover:text-foreground",
-        link: "text-foreground underline-offset-4 hover:underline",
+          "bg-red-50 text-red-800 border-red-200 font-medium",
+        dark:
+          "bg-[#0F2A21] text-white border-[#163a2e] font-medium",
+      },
+      size: {
+        default: "px-3 py-1 text-xs",
+        sm: "px-2.5 py-0.5 text-[11px]",
+        lg: "px-4 py-1.5 text-sm",
       },
     },
     defaultVariants: {
       variant: "default",
+      size: "default",
     },
   }
 )
@@ -27,6 +42,7 @@ const badgeVariants = cva(
 function Badge({
   className,
   variant = "default",
+  size = "default",
   asChild = false,
   ...props
 }: React.ComponentProps<"span"> &
@@ -37,7 +53,7 @@ function Badge({
     <Comp
       data-slot="badge"
       data-variant={variant}
-      className={cn(badgeVariants({ variant }), className)}
+      className={cn(badgeVariants({ variant, size }), className)}
       {...props}
     />
   )
