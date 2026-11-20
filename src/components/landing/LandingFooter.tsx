@@ -28,14 +28,8 @@ export function LandingFooter() {
       }}
     >
       <div className="w rv">
-        <p
-          style={{
-            font: '500 18px var(--font-inter, Inter)',
-            color: '#14382B',
-            margin: 0,
-          }}
-        >
-          Built for builders and contributors worldwide.
+        <p style={{ font: '500 18px Inter', color: '#14382B', margin: 0 }}>
+          Built for the people who teach machines. It’s more than a marketplace.
         </p>
         <h2
           className="h2"
@@ -44,7 +38,9 @@ export function LandingFooter() {
             marginTop: '22px',
           }}
         >
-          Get started. Mint your first dataset.
+          Get started.
+          <br />
+          Mint your first <i className="mk" /> dataset.
         </h2>
         <div style={{ marginTop: '44px' }}>
           <Link
@@ -57,6 +53,9 @@ export function LandingFooter() {
               fontSize: '18px',
             }}
           >
+            <span className="ms" aria-hidden="true">
+              rocket_launch
+            </span>
             Start building
           </Link>
         </div>
@@ -65,9 +64,8 @@ export function LandingFooter() {
       <div className="w" style={{ marginTop: '150px', textAlign: 'left' }}>
         <footer className="ft rv">
           <div>
-            <Link className="lg" href="/" style={{ margin: 0 }}>
-              <i>D</i>
-              <span>datamint</span>
+            <Link className="lg" href="#" style={{ margin: 0 }}>
+              <i>D</i>datamint
             </Link>
             <form onSubmit={handleSubscribe}>
               <label className="mail" style={{ marginTop: '28px' }}>
@@ -83,7 +81,7 @@ export function LandingFooter() {
                 <button
                   type="submit"
                   className="btn"
-                  style={{ height: '44px', padding: '0 20px' }}
+                  style={{ height: '44px', padding: '0 20px', cursor: 'pointer' }}
                   disabled={subscribed}
                 >
                   {subscribed ? 'Joined' : 'Sign up'}
@@ -101,48 +99,32 @@ export function LandingFooter() {
 
           <div>
             <b>Contribute</b>
-            <a href="#how">MiniPay</a>
-            <Link href="/tasks">Demo task</Link>
-            <a href="mailto:support@datamint.io">Support</a>
+            <a href="#">MiniPay</a>
+            <a href="#try">Demo task</a>
+            <a href="#">Support</a>
           </div>
 
           <div>
             <b>Account</b>
             {isConnected ? (
-              <button
-                type="button"
-                onClick={connect}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                <span>{truncateAddress(address!)}</span>
-              </button>
+              <a href="#" onClick={(e) => e.preventDefault()}>
+                {truncateAddress(address!)}
+              </a>
             ) : (
-              <button
-                type="button"
-                onClick={connect}
-                disabled={isConnecting}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  textAlign: 'left',
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  connect()
                 }}
               >
-                <span>{isConnecting ? 'Connecting...' : 'Connect wallet'}</span>
-              </button>
+                {isConnecting ? 'Connecting...' : 'Connect wallet'}
+              </a>
             )}
             <Link href="/login">Sign in</Link>
-            <Link href="/login">Terms</Link>
+            <a href="#">Terms</a>
           </div>
         </footer>
-
         <div
           style={{
             display: 'flex',
