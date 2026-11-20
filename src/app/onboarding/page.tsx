@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { AuthNavbar } from '@/components/auth/AuthNavbar'
 import { useWeb3 } from '@/hooks/useWeb3'
