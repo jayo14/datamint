@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card'
-import { CheckCircle2, UserCircle, Rocket, Coins, Sparkles, ArrowRight } from 'lucide-react'
+import { AuthNavbar } from '@/components/auth/AuthNavbar'
+import { useWeb3 } from '@/hooks/useWeb3'
 
 interface UserProfile {
-  id: string;
-  role: 'creator' | 'contributor' | null;
-  wallet_address?: string;
+  id: string
+  role: 'creator' | 'contributor' | null
+  wallet_address?: string
 }
 
 export default function Onboarding() {
@@ -21,27 +21,42 @@ export default function Onboarding() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
   const router = useRouter()
   const supabase = createClient()
+  const { address } = useWeb3()
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+
       if (!authUser) {
         router.push('/login')
         return
       }
+
       setUser({ id: authUser.id, email: authUser.email })
 
-      const { data: profile } = await supabase
+      // Check cookie for intended role
+      const cookieRole = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('datamint_intended_role='))
+        ?.split('=')[1] as 'creator' | 'contributor' | undefined
+
+      const { data: profile } = (await supabase
         .from('users')
         .select('role')
         .eq('id', authUser.id)
-        .single() as { data: UserProfile | null }
+        .single()) as { data: UserProfile | null }
 
       if (profile?.role) {
         setRole(profile.role)
+      } else if (cookieRole === 'creator' || cookieRole === 'contributor') {
+        setRole(cookieRole)
       }
+
       setLoading(false)
     }
+
     checkUser()
   }, [router, supabase])
 
@@ -49,173 +64,386 @@ export default function Onboarding() {
     if (!role || !user) return
     setSaving(true)
 
-    // Get wallet address from cookie if available
+    // Get wallet address from cookie or web3 provider
     const walletCookie = document.cookie
       .split('; ')
-      .find(row => row.startsWith('datamint_wallet_address='))
-    const walletAddress = walletCookie ? walletCookie.split('=')[1] : null
+      .find((row) => row.startsWith('datamint_wallet_address='))
+    const walletAddress = walletCookie ? walletCookie.split('=')[1] : address || null
 
-    const { error } = await supabase
-      .from('users')
-      .upsert({
-        id: user.id,
-        role: role,
-        wallet_address: walletAddress
-      })
+    const { error } = await supabase.from('users').upsert({
+      id: user.id,
+      role: role,
+      wallet_address: walletAddress,
+    })
 
     if (error) {
       alert(error.message)
+      setSaving(false)
     } else {
       router.push(role === 'creator' ? '/dashboard' : '/tasks')
     }
-    setSaving(false)
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="pg min-h-screen flex flex-col items-center justify-center">
+        <div className="w-14 h-14 rounded-full border-4 border-[#74E3B6] border-t-transparent animate-spin mb-4" />
+        <p className="text-[#3F5F52] font-semibold text-sm">Preparing your session...</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-2xl mx-auto py-12 px-4 text-left">
-      <div className="mb-12 text-center space-y-4 text-left">
-        <div className="flex justify-center gap-2 text-left mx-auto">
+    <div className="pg min-h-screen flex flex-col justify-between selection:bg-[#74E3B6] selection:text-[#0D1F18]">
+      <AuthNavbar showBackHome={false} currentStepBadge={`Step ${step} of 3 • Profile Setup`} />
+
+      <main className="w-full flex-1 flex flex-col justify-center items-center px-4 py-8 md:py-12 relative overflow-hidden">
+        {/* Ambient Decorative Glowing Coins */}
+        <div
+          className="coin w-36 h-36 -top-10 -left-10 md:left-14 pointer-events-none opacity-40 bg-[#74E3B6]"
+          aria-hidden="true"
+        />
+        <div
+          className="coin w-44 h-44 -bottom-10 -right-10 md:right-20 pointer-events-none opacity-30 bg-[#FFE08A]"
+          style={{ animationDelay: '-4s' }}
+          aria-hidden="true"
+        />
+
+        <div className="w-full max-w-[640px] z-10 mx-auto">
+          {/* Step Progress Pill */}
+          <div className="flex items-center justify-center gap-2.5 mb-8">
             {[1, 2, 3].map((s) => (
-                <div
-                    key={s}
-                    className={`h-2 w-16 rounded-full transition-all ${step >= s ? 'bg-primary' : 'bg-secondary'}`}
-                />
+              <div
+                key={s}
+                className={`h-2.5 rounded-full transition-all duration-300 ${
+                  step === s
+                    ? 'w-16 bg-[#0B9E6B]'
+                    : step > s
+                    ? 'w-10 bg-[#74E3B6]'
+                    : 'w-8 bg-[#BFE3D2]/60'
+                }`}
+              />
             ))}
-        </div>
-        <h1 className="text-3xl font-black tracking-tight text-center">Complete your profile</h1>
-        <p className="text-muted-foreground text-center text-base">Just a few steps to get you started on DataMint.</p>
-      </div>
+          </div>
 
-      {step === 1 && (
-        <Card className="border-none shadow-xl rounded-[2.5rem] p-4 animate-in fade-in slide-in-from-right-4 duration-500 text-left bg-white">
-            <CardHeader className="text-center text-left">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary-foreground">
-                    <UserCircle className="w-10 h-10" />
+          {/* Step 1: Choose Role */}
+          {step === 1 && (
+            <div className="bg-white/95 backdrop-blur-xl border border-[#BFE3D2]/70 rounded-[36px] md:rounded-[44px] p-6 sm:p-10 shadow-[0_24px_50px_-15px_rgba(15,42,33,0.12)] space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 rounded-2xl bg-[#74E3B6]/30 flex items-center justify-center mx-auto text-[#0D1F18] mb-2">
+                  <span className="ms text-2xl" aria-hidden="true">
+                    diversity_3
+                  </span>
                 </div>
-                <CardTitle className="text-2xl font-bold text-center">Choose your path</CardTitle>
-                <CardDescription className="text-center text-base">How do you plan to use DataMint?</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-4 pt-4 text-left">
+                <h2 className="h2 !text-2xl md:!text-3xl !font-medium text-[#0D1F18]">
+                  Select your primary path
+                </h2>
+                <p className="text-[#3F5F52] text-sm md:text-base">
+                  Choose how you want to interact with the DataMint protocol. You can switch roles at any time.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {/* Contributor Card */}
                 <button
-                    onClick={() => setRole('creator')}
-                    className={`flex items-start gap-4 p-6 rounded-3xl border-2 text-left transition-all ${role === 'creator' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                  type="button"
+                  onClick={() => setRole('contributor')}
+                  className={`p-6 rounded-3xl border-2 text-left transition-all duration-200 cursor-pointer flex flex-col sm:flex-row items-start gap-4 ${
+                    role === 'contributor'
+                      ? 'border-[#0B9E6B] bg-[#EAFBF3] shadow-[0_12px_28px_-10px_rgba(11,158,107,0.25)]'
+                      : 'border-[#BFE3D2]/70 hover:border-[#74E3B6] hover:bg-[#EAFBF3]/40'
+                  }`}
                 >
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${role === 'creator' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
-                        <Sparkles className="w-6 h-6" />
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-none transition-colors ${
+                      role === 'contributor'
+                        ? 'bg-[#0B9E6B] text-white'
+                        : 'bg-white border border-[#BFE3D2] text-[#3F5F52]'
+                    }`}
+                  >
+                    <span className="ms text-2xl" aria-hidden="true">
+                      paid
+                    </span>
+                  </div>
+
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-lg text-[#0D1F18]">I am a Contributor</h3>
+                      {role === 'contributor' && (
+                        <span className="ms text-xl text-[#0B9E6B]" aria-hidden="true">
+                          check_circle
+                        </span>
+                      )}
                     </div>
-                    <div className="text-left">
-                        <p className="font-bold text-lg text-left leading-tight">I am a Creator</p>
-                        <p className="text-sm text-muted-foreground text-left pt-1">I want to request data and build AI models.</p>
+                    <p className="text-xs text-[#3F5F52] leading-relaxed">
+                      Complete micro-tasks like recording speech, taking photos, and labeling text.
+                    </p>
+                    <div className="pt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-[#0B9E6B]">
+                      <span className="px-2 py-0.5 rounded-full bg-white border border-[#BFE3D2]">Instant Celo cUSD</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white border border-[#BFE3D2]">MiniPay Friendly</span>
                     </div>
-                    {role === 'creator' && <CheckCircle2 className="ml-auto w-6 h-6 text-primary" />}
+                  </div>
                 </button>
 
+                {/* Creator Card */}
                 <button
-                    onClick={() => setRole('contributor')}
-                    className={`flex items-start gap-4 p-6 rounded-3xl border-2 text-left transition-all ${role === 'contributor' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                  type="button"
+                  onClick={() => setRole('creator')}
+                  className={`p-6 rounded-3xl border-2 text-left transition-all duration-200 cursor-pointer flex flex-col sm:flex-row items-start gap-4 ${
+                    role === 'creator'
+                      ? 'border-[#0B9E6B] bg-[#EAFBF3] shadow-[0_12px_28px_-10px_rgba(11,158,107,0.25)]'
+                      : 'border-[#BFE3D2]/70 hover:border-[#74E3B6] hover:bg-[#EAFBF3]/40'
+                  }`}
                 >
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${role === 'contributor' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
-                        <Coins className="w-6 h-6" />
-                    </div>
-                    <div className="text-left">
-                        <p className="font-bold text-lg text-left leading-tight">I am a Contributor</p>
-                        <p className="text-sm text-muted-foreground text-left pt-1">I want to earn rewards by completing tasks.</p>
-                    </div>
-                    {role === 'contributor' && <CheckCircle2 className="ml-auto w-6 h-6 text-primary" />}
-                </button>
-            </CardContent>
-            <CardFooter className="pt-8 text-left">
-                <Button
-                    disabled={!role}
-                    className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg h-14 bg-primary text-primary-foreground hover:opacity-90"
-                    onClick={() => setStep(2)}
-                >
-                    Continue
-                </Button>
-            </CardFooter>
-        </Card>
-      )}
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-none transition-colors ${
+                      role === 'creator'
+                        ? 'bg-[#0B9E6B] text-white'
+                        : 'bg-white border border-[#BFE3D2] text-[#3F5F52]'
+                    }`}
+                  >
+                    <span className="ms text-2xl" aria-hidden="true">
+                      psychology
+                    </span>
+                  </div>
 
-      {step === 2 && (
-        <Card className="border-none shadow-xl rounded-[2.5rem] p-4 animate-in fade-in slide-in-from-right-4 duration-500 text-left bg-white">
-            <CardHeader className="text-center text-left">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary-foreground">
-                    <Rocket className="w-10 h-10" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-lg text-[#0D1F18]">I am an AI Creator / Team</h3>
+                      {role === 'creator' && (
+                        <span className="ms text-xl text-[#0B9E6B]" aria-hidden="true">
+                          check_circle
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#3F5F52] leading-relaxed">
+                      Request bespoke training data, fund audited escrow pools, and export verified datasets.
+                    </p>
+                    <div className="pt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-[#0B9E6B]">
+                      <span className="px-2 py-0.5 rounded-full bg-white border border-[#BFE3D2]">Smart Escrow</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white border border-[#BFE3D2]">Automated AI QA</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                disabled={!role}
+                onClick={() => setStep(2)}
+                className="btn w-full !h-14 !rounded-full !flex !items-center !justify-center !gap-2 text-[#0D1F18] font-bold text-base cursor-pointer shadow-[0_10px_25px_-5px_rgba(116,227,182,0.4)] disabled:opacity-50"
+              >
+                <span>Continue</span>
+                <span className="ms text-xl" aria-hidden="true">
+                  arrow_forward
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Step 2: Protocol Tour */}
+          {step === 2 && (
+            <div className="bg-white/95 backdrop-blur-xl border border-[#BFE3D2]/70 rounded-[36px] md:rounded-[44px] p-6 sm:p-10 shadow-[0_24px_50px_-15px_rgba(15,42,33,0.12)] space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 rounded-2xl bg-[#74E3B6]/30 flex items-center justify-center mx-auto text-[#0D1F18] mb-2">
+                  <span className="ms text-2xl" aria-hidden="true">
+                    route
+                  </span>
                 </div>
-                <CardTitle className="text-2xl font-bold text-center leading-tight">Quick Overview</CardTitle>
-                <CardDescription className="text-center text-base text-muted-foreground">Here is how it works for you.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-4 text-left">
+                <h2 className="h2 !text-2xl md:!text-3xl !font-medium text-[#0D1F18]">
+                  How DataMint works for you
+                </h2>
+                <p className="text-[#3F5F52] text-sm md:text-base">
+                  {role === 'creator'
+                    ? '3 simple steps to collect production-grade datasets at scale.'
+                    : '3 steps to turn your voice and observations into instant crypto earnings.'}
+                </p>
+              </div>
+
+              {/* 3 Step Visual Cards */}
+              <div className="space-y-3.5">
                 {role === 'creator' ? (
-                    <div className="space-y-4 text-left">
-                        <div className="flex gap-4 text-left">
-                            <div className="w-8 h-8 rounded-full bg-primary/20 flex-none flex items-center justify-center font-bold text-primary-foreground text-sm">1</div>
-                            <p className="text-muted-foreground font-medium pt-1 text-left text-base leading-relaxed">Create a dataset request and define task types.</p>
-                        </div>
-                        <div className="flex gap-4 text-left">
-                            <div className="w-8 h-8 rounded-full bg-primary/20 flex-none flex items-center justify-center font-bold text-primary-foreground text-sm">2</div>
-                            <p className="text-muted-foreground font-medium pt-1 text-left text-base leading-relaxed">Fund the on-chain escrow via Celo.</p>
-                        </div>
-                        <div className="flex gap-4 text-left">
-                            <div className="w-8 h-8 rounded-full bg-primary/20 flex-none flex items-center justify-center font-bold text-primary-foreground text-sm">3</div>
-                            <p className="text-muted-foreground font-medium pt-1 text-left text-base leading-relaxed">AI validates submissions and you export the data.</p>
-                        </div>
+                  <>
+                    <div className="p-4 rounded-2xl bg-[#EAFBF3]/60 border border-[#BFE3D2] flex items-start gap-3.5">
+                      <div className="w-8 h-8 rounded-full bg-[#0B9E6B] text-white flex-none flex items-center justify-center font-bold text-sm">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-[#0D1F18]">Define & Scope Campaign</h4>
+                        <p className="text-xs text-[#3F5F52] mt-0.5 leading-relaxed">
+                          Choose task categories (Speech audio, OCR image, text prompts) and acceptance criteria.
+                        </p>
+                      </div>
                     </div>
-                ) : (
-                    <div className="space-y-4 text-left">
-                        <div className="flex gap-4 text-left">
-                            <div className="w-8 h-8 rounded-full bg-primary/20 flex-none flex items-center justify-center font-bold text-primary-foreground text-sm">1</div>
-                            <p className="text-muted-foreground font-medium pt-1 text-left text-base leading-relaxed">Browse available tasks in your area.</p>
-                        </div>
-                        <div className="flex gap-4 text-left">
-                            <div className="w-8 h-8 rounded-full bg-primary/20 flex-none flex items-center justify-center font-bold text-primary-foreground text-sm">2</div>
-                            <p className="text-muted-foreground font-medium pt-1 text-left text-base leading-relaxed">Submit high-quality audio, images, or text.</p>
-                        </div>
-                        <div className="flex gap-4 text-left">
-                            <div className="w-8 h-8 rounded-full bg-primary/20 flex-none flex items-center justify-center font-bold text-primary-foreground text-sm">3</div>
-                            <p className="text-muted-foreground font-medium pt-1 text-left text-base leading-relaxed">Get paid instantly to your MiniPay wallet.</p>
-                        </div>
-                    </div>
-                )}
-            </CardContent>
-            <CardFooter className="pt-8 flex gap-4 text-left">
-                <Button variant="ghost" className="h-14 rounded-2xl flex-1 h-14 font-bold" onClick={() => setStep(1)}>Back</Button>
-                <Button className="h-14 rounded-2xl flex-[2] text-lg font-bold shadow-lg h-14 bg-primary text-primary-foreground hover:opacity-90" onClick={() => setStep(3)}>Got it!</Button>
-            </CardFooter>
-        </Card>
-      )}
 
-      {step === 3 && (
-        <Card className="border-none shadow-xl rounded-[2.5rem] p-4 animate-in fade-in slide-in-from-right-4 duration-500 text-center text-left bg-white">
-            <CardHeader className="text-center text-left">
-                <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-primary-foreground">
-                    <Sparkles className="w-12 h-12" />
-                </div>
-                <CardTitle className="text-3xl font-black text-center leading-tight">All set!</CardTitle>
-                <CardDescription className="text-lg text-center text-muted-foreground">You&apos;re ready to start your journey on DataMint.</CardDescription>
-            </CardHeader>
-            <CardFooter className="pt-8 flex flex-col gap-4 text-left">
-                <Button
-                    className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg flex items-center justify-center gap-2 group h-14 bg-primary text-primary-foreground hover:opacity-90"
-                    onClick={handleCompleteOnboarding}
-                    disabled={saving}
+                    <div className="p-4 rounded-2xl bg-[#EAFBF3]/60 border border-[#BFE3D2] flex items-start gap-3.5">
+                      <div className="w-8 h-8 rounded-full bg-[#0B9E6B] text-white flex-none flex items-center justify-center font-bold text-sm">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-[#0D1F18]">Lock Funds in Escrow</h4>
+                        <p className="text-xs text-[#3F5F52] mt-0.5 leading-relaxed">
+                          Deposit cUSD/CELO into our open-source, non-custodial smart escrow contract.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-[#EAFBF3]/60 border border-[#BFE3D2] flex items-start gap-3.5">
+                      <div className="w-8 h-8 rounded-full bg-[#0B9E6B] text-white flex-none flex items-center justify-center font-bold text-sm">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-[#0D1F18]">AI Quality Gate & Export</h4>
+                        <p className="text-xs text-[#3F5F52] mt-0.5 leading-relaxed">
+                          Submissions pass multi-stage AI validation; export verified data anytime in JSONL.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-4 rounded-2xl bg-[#EAFBF3]/60 border border-[#BFE3D2] flex items-start gap-3.5">
+                      <div className="w-8 h-8 rounded-full bg-[#0B9E6B] text-white flex-none flex items-center justify-center font-bold text-sm">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-[#0D1F18]">Discover Real-World Tasks</h4>
+                        <p className="text-xs text-[#3F5F52] mt-0.5 leading-relaxed">
+                          Browse regional African and global language prompts, photos, and micro-surveys.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-[#EAFBF3]/60 border border-[#BFE3D2] flex items-start gap-3.5">
+                      <div className="w-8 h-8 rounded-full bg-[#0B9E6B] text-white flex-none flex items-center justify-center font-bold text-sm">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-[#0D1F18]">Record & Submit Clean Samples</h4>
+                        <p className="text-xs text-[#3F5F52] mt-0.5 leading-relaxed">
+                          Record clean audio or upload photos directly through your phone browser or MiniPay.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-[#EAFBF3]/60 border border-[#BFE3D2] flex items-start gap-3.5">
+                      <div className="w-8 h-8 rounded-full bg-[#0B9E6B] text-white flex-none flex items-center justify-center font-bold text-sm">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-[#0D1F18]">Instant Escrow Release</h4>
+                        <p className="text-xs text-[#3F5F52] mt-0.5 leading-relaxed">
+                          Once validated by AI QA, funds are unlocked directly into your Celo wallet.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="btn w2 !h-14 !px-6 text-sm font-semibold text-[#0D1F18] flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                    {saving ? 'Saving...' : (
-                        <>
-                            Go to {role === 'creator' ? 'Dashboard' : 'Tasks'}
-                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                        </>
-                    )}
-                </Button>
-            </CardFooter>
-        </Card>
-      )}
+                  <span className="ms text-lg" aria-hidden="true">
+                    arrow_back
+                  </span>
+                  <span>Back</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="btn flex-1 !h-14 !rounded-full !flex !items-center !justify-center !gap-2 text-[#0D1F18] font-bold text-base cursor-pointer shadow-[0_10px_25px_-5px_rgba(116,227,182,0.4)]"
+                >
+                  <span>Ready to Launch</span>
+                  <span className="ms text-xl" aria-hidden="true">
+                    arrow_forward
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Confirmation & Enter Platform */}
+          {step === 3 && (
+            <div className="bg-white/95 backdrop-blur-xl border border-[#BFE3D2]/70 rounded-[36px] md:rounded-[44px] p-6 sm:p-10 shadow-[0_24px_50px_-15px_rgba(15,42,33,0.12)] space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 text-center">
+              <div className="space-y-3">
+                <div className="w-20 h-20 rounded-full bg-[#74E3B6]/30 flex items-center justify-center mx-auto text-[#0B9E6B]">
+                  <span className="ms text-4xl" aria-hidden="true">
+                    verified
+                  </span>
+                </div>
+                <h2 className="h2 !text-3xl md:!text-4xl !font-medium text-[#0D1F18]">
+                  You&apos;re all set!
+                </h2>
+                <p className="text-[#3F5F52] text-sm md:text-base max-w-sm mx-auto">
+                  Your profile has been created as{' '}
+                  <span className="font-bold text-[#0D1F18] capitalize">{role}</span>.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#EAFBF3] border border-[#BFE3D2] text-left text-xs text-[#3F5F52] space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-[#3F5F52]">Active Identity:</span>
+                  <span className="font-bold text-[#0D1F18]">{user?.email || 'Web3 Account'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-[#3F5F52]">Selected Mode:</span>
+                  <span className="font-bold text-[#0B9E6B] uppercase tracking-wider">{role}</span>
+                </div>
+                {address && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-[#3F5F52]">Linked Wallet:</span>
+                    <span className="font-mono text-[#0D1F18]">
+                      {address.slice(0, 8)}...{address.slice(-6)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleCompleteOnboarding}
+                  className="btn w-full !h-14 !rounded-full !flex !items-center !justify-center !gap-2 text-[#0D1F18] font-bold text-base cursor-pointer shadow-[0_10px_25px_-5px_rgba(116,227,182,0.4)] disabled:opacity-50"
+                  data-element-type="button"
+                  data-label="Enter Application"
+                >
+                  {saving ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-5 h-5 border-2 border-[#0D1F18] border-t-transparent rounded-full animate-spin" />
+                      <span>Saving profile...</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span>Enter {role === 'creator' ? 'Dataset Dashboard' : 'Tasks Marketplace'}</span>
+                      <span className="ms text-xl" aria-hidden="true">
+                        arrow_forward
+                      </span>
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="text-xs text-[#3F5F52] hover:text-[#0D1F18] font-medium underline"
+                >
+                  Review previous step
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      <footer className="py-6 text-center text-xs text-[#3F5F52] border-t border-[#BFE3D2]/40">
+        <p>DataMint Protocol • Decentralized AI Data Escrow on Celo</p>
+      </footer>
     </div>
   )
 }
