@@ -132,3 +132,35 @@ flutter run -d linux
 # or
 flutter run -d chrome
 ```
+
+---
+
+## Android APK Builds & GitHub Releases
+
+### Automated GitHub CI/CD Releases
+Every release or push triggers `.github/workflows/mobile-ci.yml`, which runs static analysis, unit tests, builds the production Android APK, and uploads the artifacts:
+
+1. **GitHub Releases Download**:
+   - Go to the repository's [Releases](../../releases) tab on GitHub.
+   - Download the latest **`datamint-mobile.apk`** or versioned **`datamint-mobile-v*.apk`**.
+   - Verify integrity using the accompanying `.sha256` checksum file.
+
+2. **GitHub Actions Artifacts**:
+   - Every CI run (including PRs and branch pushes) archives the built APK in GitHub Actions artifacts under **`datamint-mobile-apk`** (retained for 30 days).
+
+3. **Triggering a Release**:
+   - **Git Tag**: Push a version tag:
+     ```bash
+     git tag v1.0.0
+     git push origin v1.0.0
+     ```
+   - **GitHub UI**: Draft and publish a release under GitHub Releases.
+   - **Manual Dispatch**: Go to GitHub Actions $\to$ **Mobile Application CI** $\to$ **Run workflow** with optional custom tag name.
+
+### Local APK Build
+To build the universal release APK locally:
+```bash
+flutter build apk --release
+# Output: build/app/outputs/flutter-apk/app-release.apk
+```
+
