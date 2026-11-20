@@ -6,6 +6,7 @@ import { LandingMarquee } from '@/components/landing/LandingMarquee'
 import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks'
 import { LandingEscrow } from '@/components/landing/LandingEscrow'
 import { LandingStatement } from '@/components/landing/LandingStatement'
+import { LandingDemo } from '@/components/landing/LandingDemo'
 import { LandingDatasets } from '@/components/landing/LandingDatasets'
 import { LandingFooter } from '@/components/landing/LandingFooter'
 
@@ -30,8 +31,10 @@ export default function Home() {
       <LandingHowItWorks />
       <LandingEscrow />
       <LandingStatement />
+      <LandingDemo />
       <LandingDatasets />
       <LandingFooter />
     </div>
   )
 }
+
