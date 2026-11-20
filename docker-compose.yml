@@ -1,34 +1,49 @@
 services:
+  # ----------------------------------------------------------------------------
+  # PostgreSQL 16 Database
+  # ----------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: datamint-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: datamint
-      POSTGRES_PASSWORD: datamint_password
-      POSTGRES_DB: datamint_db
+      POSTGRES_USER: ${POSTGRES_USER:-datamint}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datamint_password}
+      POSTGRES_DB: ${POSTGRES_DB:-datamint_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - datamint-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U datamint -d datamint_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-datamint} -d ${POSTGRES_DB:-datamint_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  # ----------------------------------------------------------------------------
+  # Redis 7 In-Memory Cache and Task Broker
+  # ----------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
     container_name: datamint-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - datamint-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  # ----------------------------------------------------------------------------
+  # DataMint FastAPI Monolith Backend
+  # ----------------------------------------------------------------------------
   backend:
     build:
       context: ./backend
@@ -39,17 +54,89 @@ services:
       - "8000:8000"
     environment:
       - ENVIRONMENT=development
-      - DATABASE_URL=postgresql+asyncpg://datamint:datamint_password@postgres:5432/datamint_db
+      - DEBUG=true
+      - RUN_MIGRATIONS=true
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-datamint}:${POSTGRES_PASSWORD:-datamint_password}@postgres:5432/${POSTGRES_DB:-datamint_db}
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET_KEY=dev-secret-key-change-in-production-datamint-celo-ai
       - JWT_ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=15
       - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - CELO_RPC_URL=${CELO_RPC_URL:-https://alfajores-forno.celo-testnet.org}
+      - CELO_CHAIN_ID=${CELO_CHAIN_ID:-44787}
+      - ESCROW_CONTRACT_ADDRESS=${ESCROW_CONTRACT_ADDRESS:-0x0000000000000000000000000000000000000000}
+      - PLATFORM_SIGNER_PRIVATE_KEY=${PLATFORM_SIGNER_PRIVATE_KEY:-0x0000000000000000000000000000000000000000000000000000000000000001}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - datamint-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # Celery Asynchronous Task Worker
+  # ----------------------------------------------------------------------------
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: datamint-worker
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-datamint}:${POSTGRES_PASSWORD:-datamint_password}@postgres:5432/${POSTGRES_DB:-datamint_db}
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=dev-secret-key-change-in-production-datamint-celo-ai
+      - CELO_RPC_URL=${CELO_RPC_URL:-https://alfajores-forno.celo-testnet.org}
+      - CELO_CHAIN_ID=${CELO_CHAIN_ID:-44787}
+      - ESCROW_CONTRACT_ADDRESS=${ESCROW_CONTRACT_ADDRESS:-0x0000000000000000000000000000000000000000}
+      - PLATFORM_SIGNER_PRIVATE_KEY=${PLATFORM_SIGNER_PRIVATE_KEY:-0x0000000000000000000000000000000000000000000000000000000000000001}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - datamint-network
+
+  # ----------------------------------------------------------------------------
+  # Celery Beat Periodic Scheduler
+  # ----------------------------------------------------------------------------
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: datamint-beat
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info"]
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-datamint}:${POSTGRES_PASSWORD:-datamint_password}@postgres:5432/${POSTGRES_DB:-datamint_db}
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=dev-secret-key-change-in-production-datamint-celo-ai
+      - CELO_RPC_URL=${CELO_RPC_URL:-https://alfajores-forno.celo-testnet.org}
+      - CELO_CHAIN_ID=${CELO_CHAIN_ID:-44787}
+      - ESCROW_CONTRACT_ADDRESS=${ESCROW_CONTRACT_ADDRESS:-0x0000000000000000000000000000000000000000}
+      - PLATFORM_SIGNER_PRIVATE_KEY=${PLATFORM_SIGNER_PRIVATE_KEY:-0x0000000000000000000000000000000000000000000000000000000000000001}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - datamint-network
+
+networks:
+  datamint-network:
+    driver: bridge
 
 volumes:
   postgres_data:
+  redis_data:
