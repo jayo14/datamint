@@ -5,8 +5,8 @@ from eth_account import Account
 from eth_utils import keccak, to_checksum_address
 
 from app.services.kms_signer import (
-    SECP256K1_N,
     SECP256K1_HALF_N,
+    SECP256K1_N,
     KmsSignerProvider,
     der_to_eth_signature,
     eth_to_der_signature,
@@ -103,7 +103,7 @@ def test_kms_signer_provider_eip712_mock():
     acct = Account.create()
 
     class MockKmsClient:
-        def sign(self, KeyId, Message, MessageType, SigningAlgorithm):
+        def sign(self, KeyId, Message, MessageType, SigningAlgorithm):  # noqa: N803
             assert MessageType == "DIGEST"
             assert SigningAlgorithm == "ECDSA_SHA_256"
             # Simulate AWS KMS signing the digest

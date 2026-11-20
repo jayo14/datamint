@@ -274,9 +274,7 @@ class ReviewService:
         query = (
             select(Appeal)
             .where(Appeal.id == appeal_id)
-            .options(
-                selectinload(Appeal.submission).selectinload(Submission.campaign)
-            )
+            .options(selectinload(Appeal.submission).selectinload(Submission.campaign))
         )
         appeal = (await self.db.execute(query)).scalar_one_or_none()
         if not appeal:

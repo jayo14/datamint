@@ -10,6 +10,7 @@ This module provides:
 """
 
 from typing import Any, Optional, Tuple
+
 from cryptography.hazmat.primitives.asymmetric.utils import (
     decode_dss_signature,
     encode_dss_signature,
@@ -84,7 +85,9 @@ def der_to_eth_signature(
         )
 
     # 4. Pack into 65-byte standard Ethereum format: r (32) || s (32) || v (1)
-    sig_bytes = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big") + bytes([resolved_v])
+    sig_bytes = (
+        r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big") + bytes([resolved_v])
+    )
     signature_hex = "0x" + sig_bytes.hex()
 
     return signature_hex, resolved_v, r, s

@@ -64,6 +64,7 @@ async def get_marketplace_campaign(
 ) -> CampaignResponse:
     """Get active campaign details by ID."""
     import uuid
+
     service = CampaignService(db)
     campaign = await service.get_campaign(uuid.UUID(campaign_id))
     return CampaignResponse.model_validate(campaign)

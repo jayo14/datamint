@@ -1,13 +1,12 @@
 """Security tests for Phase 6: IDOR protection, object-level authorization, and conflict-of-interest prevention."""
 
 from decimal import Decimal
-import uuid
 
 import pytest
 from httpx import AsyncClient
 
 from app.core.security import create_access_token
-from app.models.enums import CapabilityType, DataType, ReviewDecision, SubmissionStatus
+from app.models.enums import CapabilityType, DataType, SubmissionStatus
 from app.models.identity import User, UserCapability
 from app.schemas.campaign import CampaignCreate
 from app.schemas.submission import SubmissionDraftCreate
@@ -32,17 +31,29 @@ async def test_submission_idor_protection(async_client: AsyncClient, db_session)
     db_session.add_all(
         [
             UserCapability(user_id=creator.id, capability_type=CapabilityType.CREATOR.value),
-            UserCapability(user_id=contributor_a.id, capability_type=CapabilityType.CONTRIBUTOR.value),
-            UserCapability(user_id=contributor_b.id, capability_type=CapabilityType.CONTRIBUTOR.value),
+            UserCapability(
+                user_id=contributor_a.id, capability_type=CapabilityType.CONTRIBUTOR.value
+            ),
+            UserCapability(
+                user_id=contributor_b.id, capability_type=CapabilityType.CONTRIBUTOR.value
+            ),
             UserCapability(user_id=reviewer.id, capability_type=CapabilityType.REVIEWER.value),
         ]
     )
     await db_session.commit()
 
-    token_a = create_access_token(str(contributor_a.id), capabilities=[CapabilityType.CONTRIBUTOR.value])
-    token_b = create_access_token(str(contributor_b.id), capabilities=[CapabilityType.CONTRIBUTOR.value])
-    token_creator = create_access_token(str(creator.id), capabilities=[CapabilityType.CREATOR.value])
-    token_reviewer = create_access_token(str(reviewer.id), capabilities=[CapabilityType.REVIEWER.value])
+    token_a = create_access_token(
+        str(contributor_a.id), capabilities=[CapabilityType.CONTRIBUTOR.value]
+    )
+    token_b = create_access_token(
+        str(contributor_b.id), capabilities=[CapabilityType.CONTRIBUTOR.value]
+    )
+    token_creator = create_access_token(
+        str(creator.id), capabilities=[CapabilityType.CREATOR.value]
+    )
+    token_reviewer = create_access_token(
+        str(reviewer.id), capabilities=[CapabilityType.REVIEWER.value]
+    )
 
     # 2. Creator creates campaign
     campaign = await campaign_service.create_campaign(
@@ -122,7 +133,9 @@ async def test_reviewer_self_approval_conflict_of_interest(async_client: AsyncCl
     db_session.add_all(
         [
             UserCapability(user_id=creator.id, capability_type=CapabilityType.CREATOR.value),
-            UserCapability(user_id=hybrid_user.id, capability_type=CapabilityType.CONTRIBUTOR.value),
+            UserCapability(
+                user_id=hybrid_user.id, capability_type=CapabilityType.CONTRIBUTOR.value
+            ),
             UserCapability(user_id=hybrid_user.id, capability_type=CapabilityType.REVIEWER.value),
         ]
     )
@@ -174,7 +187,9 @@ async def test_reviewer_self_approval_conflict_of_interest(async_client: AsyncCl
 async def test_security_headers_and_correlation_id(async_client: AsyncClient):
     """Verify presence of OWASP security headers and X-Request-ID propagation."""
     custom_request_id = "test-corr-id-12345"
-    resp = await async_client.get("/api/v1/health/healthz", headers={"X-Request-ID": custom_request_id})
+    resp = await async_client.get(
+        "/api/v1/health/healthz", headers={"X-Request-ID": custom_request_id}
+    )
     assert resp.status_code == 200
     assert resp.headers.get("X-Request-ID") == custom_request_id
     assert resp.headers.get("X-Content-Type-Options") == "nosniff"
@@ -190,8 +205,9 @@ async def test_security_headers_and_correlation_id(async_client: AsyncClient):
 
 def test_production_config_validation():
     """Verify that Settings rejects insecure default secrets when ENVIRONMENT is production."""
-    from app.core.config import Settings
     import pytest
+
+    from app.core.config import Settings
 
     # Should raise error when ENVIRONMENT is production and default JWT secret is used
     with pytest.raises(ValueError, match="JWT_SECRET_KEY"):
@@ -210,4 +226,3 @@ def test_production_config_validation():
             PLATFORM_SIGNER_PRIVATE_KEY="0x0000000000000000000000000000000000000000000000000000000000000001",
             ESCROW_CONTRACT_ADDRESS="0x1234567890123456789012345678901234567890",
         )
-

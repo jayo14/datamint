@@ -241,8 +241,12 @@ async def get_submission_details(
 
     user_caps = {c.capability_type for c in current_user.capabilities if c.is_enabled}
     is_owner = submission.contributor_id == current_user.id
-    is_creator = submission.campaign is not None and submission.campaign.creator_id == current_user.id
-    is_authorized_role = bool(user_caps.intersection({CapabilityType.REVIEWER.value, CapabilityType.ADMIN.value}))
+    is_creator = (
+        submission.campaign is not None and submission.campaign.creator_id == current_user.id
+    )
+    is_authorized_role = bool(
+        user_caps.intersection({CapabilityType.REVIEWER.value, CapabilityType.ADMIN.value})
+    )
 
     if not (is_owner or is_creator or is_authorized_role):
         raise HTTPException(

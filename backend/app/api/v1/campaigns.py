@@ -38,7 +38,9 @@ async def create_campaign(
 
 
 @router.put("/{campaign_id}", response_model=CampaignResponse, status_code=status.HTTP_200_OK)
-@router.put("/drafts/{campaign_id}", response_model=CampaignResponse, status_code=status.HTTP_200_OK)
+@router.put(
+    "/drafts/{campaign_id}", response_model=CampaignResponse, status_code=status.HTTP_200_OK
+)
 async def update_campaign_draft(
     campaign_id: uuid.UUID,
     payload: CampaignUpdateDraft,

@@ -66,7 +66,7 @@ class LocalSignerProvider:
         self.chain_id = chain_id
 
     def get_signer_address(self) -> str:
-        return self.account.address
+        return str(self.account.address)
 
     def sign_reward_voucher(
         self,
@@ -170,13 +170,18 @@ class PayoutSignerService:
             )
 
         # 3. Idempotency check: if valid voucher already exists, return it
-        payout_query = select(PayoutAuthorization).where(PayoutAuthorization.submission_id == submission_id)
+        payout_query = select(PayoutAuthorization).where(
+            PayoutAuthorization.submission_id == submission_id
+        )
         existing_payout = (await self.db.execute(payout_query)).scalar_one_or_none()
         now_utc = datetime.now(timezone.utc)
         if existing_payout:
             if existing_payout.status == PayoutStatus.CLAIMED.value:
                 return existing_payout
-            if existing_payout.status == PayoutStatus.AUTHORIZED.value and existing_payout.expires_at > now_utc:
+            if (
+                existing_payout.status == PayoutStatus.AUTHORIZED.value
+                and existing_payout.expires_at > now_utc
+            ):
                 return existing_payout
 
         # 4. Resolve contributor verified primary wallet
@@ -208,7 +213,11 @@ class PayoutSignerService:
         # 7. Format parameters for EIP-712 structured data
         # On-chain campaignId bytes32
         escrow_onchain_id = campaign.escrow.onchain_campaign_id if campaign.escrow else None
-        if escrow_onchain_id and escrow_onchain_id.startswith("0x") and len(escrow_onchain_id) == 66:
+        if (
+            escrow_onchain_id
+            and escrow_onchain_id.startswith("0x")
+            and len(escrow_onchain_id) == 66
+        ):
             onchain_campaign_id = escrow_onchain_id
         else:
             # Deterministic bytes32 from campaign UUID
@@ -277,7 +286,9 @@ class PayoutSignerService:
 
     async def get_payout_voucher(self, submission_id: uuid.UUID) -> Optional[PayoutAuthorization]:
         """Fetch active payout voucher for a submission."""
-        query = select(PayoutAuthorization).where(PayoutAuthorization.submission_id == submission_id)
+        query = select(PayoutAuthorization).where(
+            PayoutAuthorization.submission_id == submission_id
+        )
         return (await self.db.execute(query)).scalar_one_or_none()
 
     async def record_claim_submission(
@@ -286,7 +297,9 @@ class PayoutSignerService:
         claim_tx_hash: str,
     ) -> PayoutAuthorization:
         """Record that the contributor has broadcasted the claimReward transaction."""
-        query = select(PayoutAuthorization).where(PayoutAuthorization.submission_id == submission_id)
+        query = select(PayoutAuthorization).where(
+            PayoutAuthorization.submission_id == submission_id
+        )
         payout = (await self.db.execute(query)).scalar_one_or_none()
         if not payout:
             raise EntityNotFoundException("PayoutAuthorization for submission", submission_id)

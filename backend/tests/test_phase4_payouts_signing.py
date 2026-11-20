@@ -129,7 +129,9 @@ async def test_eip712_voucher_generation_and_cryptographic_recovery(db_session):
         "nonce": payout.nonce,
         "deadline": payout.deadline,
     }
-    signable = encode_typed_data(domain_data=domain_data, message_types=message_types, message_data=message_data)
+    signable = encode_typed_data(
+        domain_data=domain_data, message_types=message_types, message_data=message_data
+    )
     recovered_address = Account.recover_message(
         signable,
         signature=bytes.fromhex(payout.signature[2:]),

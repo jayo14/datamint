@@ -4,7 +4,7 @@ import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Coroutine
+from typing import Any, Coroutine, TypeVar
 
 from sqlalchemy import select
 
@@ -20,8 +20,10 @@ from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T")
 
-def run_async(coro: Coroutine[Any, Any, Any]) -> Any:
+
+def run_async(coro: Coroutine[Any, Any, T]) -> T:
     """Helper running async coroutine synchronously inside Celery worker or test environment."""
     try:
         loop = asyncio.get_running_loop()

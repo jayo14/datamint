@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Protocol, Tuple
+from typing import Any, Dict, List, Optional, Protocol, Tuple, cast
 
 import httpx
 from eth_utils import keccak
@@ -86,7 +86,7 @@ class HttpRpcClient:
             resp = await client.post(self.rpc_url, json=payload)
             resp.raise_for_status()
             data = resp.json()
-            return data.get("result")
+            return cast(Optional[Dict[str, Any]], data.get("result"))
 
     async def get_logs(
         self,
@@ -107,7 +107,7 @@ class HttpRpcClient:
             resp = await client.post(self.rpc_url, json=payload)
             resp.raise_for_status()
             data = resp.json()
-            return data.get("result", [])
+            return cast(List[Dict[str, Any]], data.get("result", []))
 
 
 class BlockchainIndexerService:
@@ -553,9 +553,7 @@ class BlockchainIndexerService:
                 notes=f"Confirmed on-chain claim tx {tx_hash} (nonce {nonce})",
             )
 
-            campaign_title = (
-                submission.campaign.title if submission.campaign else "campaign"
-            )
+            campaign_title = submission.campaign.title if submission.campaign else "campaign"
             notif = Notification(
                 user_id=payout.contributor_id,
                 event_type="REWARD_CLAIM_CONFIRMED",
@@ -607,9 +605,7 @@ class BlockchainIndexerService:
             )
             self.db.add(notif)
 
-    async def _handle_campaign_closed(
-        self, campaign_id: str, tx_hash: str, log_index: int
-    ) -> None:
+    async def _handle_campaign_closed(self, campaign_id: str, tx_hash: str, log_index: int) -> None:
         """Update campaign status upon final closure."""
         query = (
             select(EscrowCampaign)

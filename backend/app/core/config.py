@@ -64,7 +64,9 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "JWT_SECRET_KEY must be a cryptographically secure key of at least 32 characters in production"
                 )
-            if self.PLATFORM_SIGNER_PRIVATE_KEY.endswith("0000000000000000000000000000000000000000000000000000000000000001"):
+            if self.PLATFORM_SIGNER_PRIVATE_KEY.endswith(
+                "0000000000000000000000000000000000000000000000000000000000000001"
+            ):
                 raise ValueError(
                     "PLATFORM_SIGNER_PRIVATE_KEY cannot use default insecure key in production"
                 )
