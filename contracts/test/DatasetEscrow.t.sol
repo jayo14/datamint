@@ -501,8 +501,10 @@ contract DatasetEscrowUnitTest is Test {
         // Tamper with the amount to claim double reward
         auth.amount = rewardPerSubmission * 2;
         vm.prank(contributor1);
-        // Signature fails because struct hash no longer matches signed digest
-        vm.expectRevert(IDatasetEscrow.InvalidSignature.selector);
+        // Reverts with InvalidClaimAmount because contract enforces strict campaign reward consistency
+        vm.expectRevert(
+            abi.encodeWithSelector(IDatasetEscrow.InvalidClaimAmount.selector, rewardPerSubmission, rewardPerSubmission * 2)
+        );
         escrow.claimReward(auth, sig);
     }
 
@@ -546,7 +548,7 @@ contract DatasetEscrowUnitTest is Test {
         // Subsequent refund attempt yields 0
         assertEq(escrow.getRefundableAmount(defaultCampaignId), 0);
         vm.prank(creator);
-        vm.expectRevert(abi.encodeWithSelector(IDatasetEscrow.NoFundsToRefund.selector, defaultCampaignId));
+        vm.expectRevert(abi.encodeWithSelector(IDatasetEscrow.NoRefundAvailable.selector, defaultCampaignId));
         escrow.refundUnallocatedFunds(defaultCampaignId);
     }
 }
