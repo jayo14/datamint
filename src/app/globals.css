@@ -1,7 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
+/* Local & Remote Material Symbols Rounded Font Definition */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 100 700;
+  src: url('/fonts/material-symbols-rounded.woff2') format('woff2'),
+       url('https://fonts.gstatic.com/s/materialsymbolsrounded/v386/sykg-zNym6YjUruM-QrEh7-nyTnjDwKNJ_190Fjzag.woff2') format('woff2');
+  font-display: swap;
+}
 
 .material-symbols-rounded,
 .ms {
@@ -51,31 +60,78 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.2 0.02 165);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 165);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 165);
-  --primary: oklch(0.85 0.12 165);
-  --primary-foreground: oklch(0.2 0.05 165);
-  --secondary: oklch(0.96 0.04 165);
-  --secondary-foreground: oklch(0.3 0.1 165);
-  --muted: oklch(0.98 0.01 165);
-  --muted-foreground: oklch(0.5 0.05 165);
-  --accent: oklch(0.92 0.06 165);
-  --accent-foreground: oklch(0.2 0.05 165);
-  --destructive: oklch(0.6 0.18 25);
-  --border: oklch(0.92 0.03 165);
-  --input: oklch(0.92 0.03 165);
-  --ring: oklch(0.85 0.12 165);
-  --radius: 0.75rem;
+  --background: #EAFBF3;
+  --foreground: #0D1F18;
+  --card: #FFFFFF;
+  --card-foreground: #0D1F18;
+  --popover: #FFFFFF;
+  --popover-foreground: #0D1F18;
+  --primary: #74E3B6;
+  --primary-foreground: #0D1F18;
+  --secondary: #EAFBF3;
+  --secondary-foreground: #0D1F18;
+  --muted: #EAFBF3;
+  --muted-foreground: #3F5F52;
+  --accent: #74E3B6;
+  --accent-foreground: #0D1F18;
+  --destructive: #EF4444;
+  --border: #BFE3D2;
+  --input: #BFE3D2;
+  --ring: #74E3B6;
+  --radius: 1.5rem;
 }
 
 @layer base {
   * { @apply border-border outline-ring/50; }
-  body { @apply bg-background text-foreground; }
-  h1, h2, h3, h4, h5, h6 { @apply font-bold tracking-tight text-slate-900; }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter, Inter), sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-bricolage, 'Bricolage Grotesque'), 'Bricolage Grotesque', Inter, sans-serif;
+    color: #0D1F18;
+    letter-spacing: -0.025em;
+  }
 }
 
-.mint-gradient { background: linear-gradient(135deg, oklch(0.95 0.05 165), oklch(0.85 0.12 165)); }
+.font-bricolage {
+  font-family: var(--font-bricolage, 'Bricolage Grotesque'), 'Bricolage Grotesque', Inter, sans-serif;
+}
+
+.mint-gradient {
+  background: linear-gradient(135deg, #EAFBF3 0%, #74E3B6 100%);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(191, 227, 210, 0.7);
+}
+
+.mint-card {
+  background-color: #FFFFFF;
+  border: 1.5px solid #BFE3D2;
+  border-radius: 28px;
+  box-shadow: 0 12px 32px -12px rgba(15, 42, 33, 0.08);
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mint-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -16px rgba(15, 42, 33, 0.12);
+}
+
+.mint-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  background-color: #EAFBF3;
+  color: #0D1F18;
+  border: 1px solid #BFE3D2;
+  font-size: 13px;
+  font-weight: 600;
+}
