@@ -7,6 +7,7 @@ import '../features/home/home_scaffold.dart';
 import '../features/marketplace/campaign_detail_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import '../features/splash/splash_screen.dart';
 import '../features/submissions/submission_detail_screen.dart';
 import '../features/submissions/submission_editor_screen.dart';
 import '../shared/models/models.dart';
@@ -16,15 +17,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final currentUserAsync = ref.watch(currentUserProvider);
 
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/splash',
     redirect: (BuildContext context, GoRouterState state) {
       // If user state is still loading initial session check, do not redirect
       if (currentUserAsync.isLoading) return null;
 
       final isAuthenticated = currentUserAsync.value != null;
+      final isSplash = state.matchedLocation == '/splash';
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
           state.matchedLocation == '/onboarding';
+
+      // Let splash screen run its own timer/animation to navigate smoothly
+      if (isSplash) return null;
 
       if (!isAuthenticated && !isAuthRoute) {
         return '/login';
@@ -37,6 +42,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),

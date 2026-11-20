@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_theme.dart';
 import '../constants/app_constants.dart';
 
@@ -31,12 +32,14 @@ class DataMintButton extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (isLoading)
-          const SizedBox(
+          SizedBox(
             width: 18,
             height: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isOutlined ? effectiveColor : AppColors.ink,
+              ),
             ),
           )
         else ...[
@@ -44,7 +47,10 @@ class DataMintButton extends StatelessWidget {
             Icon(icon, size: 18),
             const SizedBox(width: 8),
           ],
-          Text(label),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
         ],
       ],
     );
@@ -53,8 +59,15 @@ class DataMintButton extends StatelessWidget {
         ? OutlinedButton(
             onPressed: isLoading ? null : onPressed,
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: effectiveColor),
-              foregroundColor: effectiveColor,
+              side: BorderSide(color: effectiveColor, width: 1.5),
+              foregroundColor: effectiveColor == AppColors.mintPrimary
+                  ? AppColors.ink
+                  : effectiveColor,
+              backgroundColor: Colors.white.withValues(alpha: 0.9),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
             ),
             child: childContent,
           )
@@ -62,7 +75,12 @@ class DataMintButton extends StatelessWidget {
             onPressed: isLoading ? null : onPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: effectiveColor,
-              foregroundColor: Colors.black,
+              foregroundColor: AppColors.ink,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
             ),
             child: childContent,
           );
@@ -71,6 +89,164 @@ class DataMintButton extends StatelessWidget {
       return SizedBox(width: width, child: button);
     }
     return button;
+  }
+}
+
+class DataMintLogo extends StatelessWidget {
+  final double size;
+  final bool showText;
+  final Color? textColor;
+
+  const DataMintLogo({
+    super.key,
+    this.size = 38,
+    this.showText = true,
+    this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: AppColors.mint,
+            borderRadius: BorderRadius.circular(size * 0.34),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.mint.withValues(alpha: 0.35),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '⌘',
+            style: TextStyle(
+              fontSize: size * 0.55,
+              fontWeight: FontWeight.bold,
+              color: AppColors.ink,
+              height: 1,
+            ),
+          ),
+        ),
+        if (showText) ...[
+          const SizedBox(width: 10),
+          Text(
+            'DataMint',
+            style: GoogleFonts.bricolageGrotesque(
+              fontSize: size * 0.58,
+              fontWeight: FontWeight.w800,
+              color: textColor ?? AppColors.ink,
+              letterSpacing: -0.6,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class PillBadge extends StatelessWidget {
+  final String text;
+  final IconData? icon;
+  final Color? badgeColor;
+  final Color? textColor;
+  final Color? borderColor;
+
+  const PillBadge({
+    super.key,
+    required this.text,
+    this.icon,
+    this.badgeColor,
+    this.textColor,
+    this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: badgeColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: borderColor ?? AppColors.mintBorder.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.ink.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 16, color: textColor ?? AppColors.mintActive),
+            const SizedBox(width: 6),
+          ] else ...[
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: AppColors.mintActive,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            text,
+            style: TextStyle(
+              color: textColor ?? AppColors.ink,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FloatingCoinGlow extends StatelessWidget {
+  final double size;
+  final Color color;
+  final double opacity;
+
+  const FloatingCoinGlow({
+    super.key,
+    this.size = 140,
+    this.color = AppColors.mint,
+    this.opacity = 0.35,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withValues(alpha: opacity),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: opacity * 0.7),
+            blurRadius: 60,
+            spreadRadius: 20,
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -152,29 +328,30 @@ class ModalityBadge extends StatelessWidget {
     switch (modality) {
       case DataModality.text:
         icon = Icons.text_snippet_rounded;
-        color = const Color(0xFF60A5FA); // Sky blue
+        color = const Color(0xFF3B82F6); // Blue
         break;
       case DataModality.voice:
         icon = Icons.mic_rounded;
-        color = const Color(0xFFA78BFA); // Purple
+        color = const Color(0xFF8B5CF6); // Purple
         break;
       case DataModality.image:
         icon = Icons.image_rounded;
-        color = const Color(0xFF34D399); // Emerald
+        color = AppColors.mintActive; // Mint emerald
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
+          const SizedBox(width: 5),
           Text(
             modality.name.toUpperCase(),
             style: TextStyle(
@@ -219,13 +396,17 @@ class EmptyStateView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : Colors.grey.shade100,
+                color: isDark ? AppColors.darkCard : Colors.white,
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDark ? AppColors.darkBorder : AppColors.mintBorder,
+                  width: 1.2,
+                ),
               ),
               child: Icon(
                 icon,
                 size: 48,
-                color: isDark ? AppColors.darkTextMuted : Colors.grey.shade400,
+                color: isDark ? AppColors.darkTextMuted : AppColors.textMuted,
               ),
             ),
             const SizedBox(height: 20),
@@ -240,7 +421,9 @@ class EmptyStateView extends StatelessWidget {
             Text(
               message,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.lightTextSecondary,
               ),
               textAlign: TextAlign.center,
             ),

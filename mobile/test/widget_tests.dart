@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:datamint_mobile/core/constants/app_constants.dart';
 import 'package:datamint_mobile/core/widgets/common_widgets.dart';
 import 'package:datamint_mobile/features/authentication/login_screen.dart';
+import 'package:datamint_mobile/features/authentication/register_screen.dart';
+import 'package:datamint_mobile/features/onboarding/onboarding_screen.dart';
+import 'package:datamint_mobile/features/splash/splash_screen.dart';
 import 'package:datamint_mobile/shared/providers/app_providers.dart';
 import 'api_client_test.dart';
 
@@ -128,6 +131,75 @@ void main() {
       await tester.pumpAndSettle();
 
       // Form validation error should appear
+      expect(find.text('Email is required'), findsOneWidget);
+      expect(find.text('Password is required'), findsOneWidget);
+    });
+  });
+
+  group('SplashScreen Branding & UI', () {
+    testWidgets('renders brand elements and logo emblem', (tester) async {
+      final mockStorage = MockStorageService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            secureStorageProvider.overrideWithValue(mockStorage),
+          ],
+          child: const MaterialApp(
+            home: SplashScreen(),
+          ),
+        ),
+      );
+
+      expect(find.text('DataMint'), findsOneWidget);
+      expect(find.text('Decentralized AI Dataset Marketplace'), findsOneWidget);
+      expect(find.text('Celo L2 • Audited Smart Escrow'), findsOneWidget);
+      expect(find.text('⌘'), findsOneWidget);
+    });
+  });
+
+  group('OnboardingScreen Carousel & UI', () {
+    testWidgets('renders carousel cards and navigation buttons', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: OnboardingScreen(),
+        ),
+      );
+
+      expect(find.text('DataMint'), findsOneWidget);
+      expect(find.text('Skip'), findsOneWidget);
+      expect(find.text('Decentralized AI Dataset Marketplace'), findsOneWidget);
+      expect(find.text('Audited Smart Escrow'), findsOneWidget);
+      expect(find.text('Continue'), findsOneWidget);
+      expect(find.text('Sign In'), findsOneWidget);
+    });
+  });
+
+  group('RegisterScreen Form & Role Capabilities', () {
+    testWidgets('renders register fields and validates input', (tester) async {
+      final mockStorage = MockStorageService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            secureStorageProvider.overrideWithValue(mockStorage),
+          ],
+          child: const MaterialApp(
+            home: RegisterScreen(),
+          ),
+        ),
+      );
+
+      expect(find.text('Join DataMint'), findsOneWidget);
+      expect(find.text('Decentralized Protocol'), findsOneWidget);
+      expect(find.text('Dual Role (Recommended)'), findsOneWidget);
+      expect(find.text('Create Account'), findsWidgets);
+
+      final buttonFinder = find.byType(ElevatedButton).first;
+      await tester.ensureVisible(buttonFinder);
+      await tester.tap(buttonFinder);
+      await tester.pumpAndSettle();
+
       expect(find.text('Email is required'), findsOneWidget);
       expect(find.text('Password is required'), findsOneWidget);
     });

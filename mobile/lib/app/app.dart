@@ -15,7 +15,7 @@ class DataMintApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark, // Default to dark slate mode
+      themeMode: ThemeMode.light, // Signature DataMint Mint Theme
       routerConfig: router,
     );
   }
