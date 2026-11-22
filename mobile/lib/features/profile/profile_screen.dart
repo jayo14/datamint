@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/widgets/common_widgets.dart';
@@ -30,8 +31,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Wallet connected: ${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}'),
-            backgroundColor: AppColors.mintPrimary,
+            content: Text(
+              'Wallet connected: ${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}',
+            ),
+            backgroundColor: AppColors.mintActive,
           ),
         );
       }
@@ -50,17 +53,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to log out of DataMint?'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Log Out',
+          style: GoogleFonts.bricolageGrotesque(
+            fontWeight: FontWeight.bold,
+            color: AppColors.ink,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to log out of DataMint?',
+          style: TextStyle(color: AppColors.textMuted, fontSize: 13.5),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+            ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+            child: const Text('Log Out'),
           ),
         ],
       ),
@@ -80,14 +98,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final userAsync = ref.watch(currentUserProvider);
     final walletState = ref.watch(walletStateProvider);
     final activeWorkspace = ref.watch(activeWorkspaceProvider);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     final user = userAsync.value;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -95,30 +112,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                  color: AppColors.mintBorder,
+                  width: 1.2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.ink.withValues(alpha: 0.05),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 56,
-                    height: 56,
+                    width: 58,
+                    height: 58,
                     decoration: BoxDecoration(
-                      color: AppColors.mintPrimary.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.mintPrimary, width: 2),
-                    ),
-                    child: Center(
-                      child: Text(
-                        (user?.displayName ?? user?.email ?? 'D').substring(0, 1).toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.mintPrimary,
+                      color: AppColors.mint,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.mintActive.withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      (user?.displayName ?? user?.email ?? 'D').substring(0, 1).toUpperCase(),
+                      style: GoogleFonts.bricolageGrotesque(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.ink,
                       ),
                     ),
                   ),
@@ -128,32 +158,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user?.displayName ?? 'DataMint User',
-                          style: theme.textTheme.titleMedium?.copyWith(
+                          user?.displayName ?? 'DataMint Contributor',
+                          style: GoogleFonts.bricolageGrotesque(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: AppColors.ink,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           user?.email ?? 'user@datamint.ai',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.textMuted,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
                           decoration: BoxDecoration(
-                            color: AppColors.mintPrimary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
+                            color: AppColors.mintBg,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: AppColors.mintBorder, width: 1),
                           ),
                           child: Text(
                             'Reputation Score: ${(user?.reputationScore ?? 1.0).toStringAsFixed(1)} ★',
                             style: const TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.mintPrimary,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.mintActive,
                             ),
                           ),
                         ),
@@ -163,33 +196,52 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Active Workspace Card
             const Text(
               'Active Workspace Mode',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                color: AppColors.ink,
+              ),
             ),
             const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                  color: AppColors.mintBorder,
+                  width: 1.2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.ink.withValues(alpha: 0.04),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  Icon(
-                    activeWorkspace == WorkspaceRole.contributor
-                        ? Icons.volunteer_activism_rounded
-                        : Icons.business_center_rounded,
-                    color: activeWorkspace == WorkspaceRole.contributor
-                        ? AppColors.mintPrimary
-                        : AppColors.celoGold,
-                    size: 28,
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.mintBg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      activeWorkspace == WorkspaceRole.contributor
+                          ? Icons.volunteer_activism_rounded
+                          : Icons.business_center_rounded,
+                      color: activeWorkspace == WorkspaceRole.contributor
+                          ? AppColors.mintActive
+                          : AppColors.celoGold,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -198,19 +250,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       children: [
                         Text(
                           activeWorkspace == WorkspaceRole.contributor
-                              ? 'Contributor Workspace'
-                              : 'Creator Workspace',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ? 'Contributor Mode'
+                              : 'Creator Mode',
+                          style: GoogleFonts.bricolageGrotesque(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: AppColors.ink,
+                          ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           activeWorkspace == WorkspaceRole.contributor
-                              ? 'Browse tasks, submit multi-modal data, and claim cUSD.'
-                              : 'Publish dataset campaigns, fund escrow, and review data.',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ? 'Browse tasks, submit voice/image/text data, and earn cUSD.'
+                              : 'Create campaigns, fund smart escrow, and review submissions.',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textMuted,
+                            height: 1.3,
+                          ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   DataMintButton(
                     label: 'Switch',
                     isOutlined: true,
@@ -219,23 +281,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Celo Wallet Card
             const Text(
               'Connected Celo Wallet',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                color: AppColors.ink,
+              ),
             ),
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                  color: AppColors.mintBorder,
+                  width: 1.2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.ink.withValues(alpha: 0.04),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: walletState.isConnected
                   ? Column(
@@ -244,19 +318,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Row(
+                            Row(
                               children: [
-                                Icon(Icons.circle, color: AppColors.success, size: 10),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Celo Sepolia Testnet',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.mintActive,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'Celo Sepolia Connected',
+                                  style: TextStyle(
+                                    color: AppColors.mintActive,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ],
                             ),
-                            TextButton(
-                              onPressed: () => ref.read(walletStateProvider.notifier).disconnect(),
-                              child: const Text('Disconnect', style: TextStyle(color: AppColors.error, fontSize: 12)),
+                            IconButton(
+                              icon: const Icon(Icons.refresh_rounded, size: 20),
+                              color: AppColors.textMuted,
+                              onPressed: () =>
+                                  ref.read(walletStateProvider.notifier).refreshBalances(),
                             ),
                           ],
                         ),
@@ -266,91 +353,87 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           style: const TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 12,
-                            color: Colors.grey,
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 14),
                         Row(
                           children: [
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? AppColors.darkSurface : Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('cUSD Balance', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${walletState.cusdBalance.toStringAsFixed(2)} cUSD',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                    ),
-                                  ],
-                                ),
+                            Text(
+                              '${walletState.cusdBalance.toStringAsFixed(2)} cUSD',
+                              style: GoogleFonts.bricolageGrotesque(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.ink,
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? AppColors.darkSurface : Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('CELO Balance', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${walletState.celoBalance.toStringAsFixed(4)} CELO',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                    ),
-                                  ],
-                                ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${walletState.celoBalance.toStringAsFixed(4)} CELO',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textMuted,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 14),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.link_off_rounded, size: 16),
+                            label: const Text('Disconnect'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                              textStyle: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            onPressed: () =>
+                                ref.read(walletStateProvider.notifier).disconnect(),
+                          ),
+                        ),
                       ],
                     )
                   : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.account_balance_wallet_outlined, size: 40, color: Colors.grey),
-                        const SizedBox(height: 8),
                         const Text(
-                          'No Celo Wallet Connected',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          'No Web3 wallet currently linked',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textMuted,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Connect your MiniPay, Valora, or Web3 wallet to sign vouchers and claim rewards.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         DataMintButton(
                           label: 'Connect Celo Wallet',
-                          icon: Icons.link_rounded,
+                          icon: Icons.account_balance_wallet_outlined,
                           isLoading: _isConnectingWallet,
                           onPressed: _handleConnectWallet,
                         ),
                       ],
                     ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
-            // Logout Button
-            DataMintButton(
-              label: 'Sign Out',
-              icon: Icons.logout_rounded,
-              color: AppColors.error,
-              isOutlined: true,
-              width: double.infinity,
-              onPressed: _handleLogout,
+            // Logout Action
+            Center(
+              child: TextButton.icon(
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: const Text('Log Out'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  textStyle: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: _handleLogout,
+              ),
             ),
             const SizedBox(height: 20),
           ],

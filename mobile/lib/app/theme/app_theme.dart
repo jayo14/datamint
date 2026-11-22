@@ -20,6 +20,9 @@ class AppColors {
   static const Color mintAccent = Color(0xFF0B9E6B);
   static const Color celoGold = Color(0xFFF59E0B);
   static const Color celoGoldLight = Color(0xFFFFE08A);
+  static const Color darkBackground = Color(0xFF0A1C16);
+  static const Color cardBgLight = Color(0xFFFFFFFF);
+  static const Color borderLight = Color(0xFFBFE3D2);
 
   // Dark Palette (Harmonized to DataMint's #0F2A21 Forest Dark)
   static const Color darkBg = Color(0xFF0A1C16);

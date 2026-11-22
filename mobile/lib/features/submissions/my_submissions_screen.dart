@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../shared/models/models.dart';
@@ -26,7 +27,9 @@ class _MySubmissionsScreenState extends ConsumerState<MySubmissionsScreen> {
     final submissionsAsync = ref.watch(mySubmissionsProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: RefreshIndicator(
+        color: AppColors.mintActive,
         onRefresh: () async {
           ref.invalidate(mySubmissionsProvider);
         },
@@ -35,7 +38,7 @@ class _MySubmissionsScreenState extends ConsumerState<MySubmissionsScreen> {
             // Status Filter Tabs
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -57,7 +60,12 @@ class _MySubmissionsScreenState extends ConsumerState<MySubmissionsScreen> {
 
             submissionsAsync.when(
               loading: () => const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.mintActive),
+                  ),
+                ),
               ),
               error: (err, _) => SliverFillRemaining(
                 child: EmptyStateView(
@@ -88,7 +96,7 @@ class _MySubmissionsScreenState extends ConsumerState<MySubmissionsScreen> {
                 }
 
                 return SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -111,28 +119,39 @@ class _MySubmissionsScreenState extends ConsumerState<MySubmissionsScreen> {
   }
 
   Widget _buildTabChip(String status, String label) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final isSelected = _selectedStatus == status;
 
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => setState(() => _selectedStatus = status),
-      selectedColor: AppColors.mintPrimary,
-      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.black : (isDark ? Colors.white : Colors.black87),
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-        fontSize: 12,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? AppColors.mintPrimary : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+    return GestureDetector(
+      onTap: () => setState(() => _selectedStatus = status),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.mint : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSelected ? AppColors.mintActive : AppColors.mintBorder,
+            width: isSelected ? 1.5 : 1.2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.mintActive.withValues(alpha: 0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? AppColors.ink : AppColors.textMuted,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            fontSize: 12.5,
+          ),
         ),
       ),
-      showCheckmark: false,
     );
   }
 }
@@ -145,14 +164,26 @@ class _SubmissionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.mintBorder,
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.ink.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(24),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -166,11 +197,12 @@ class _SubmissionCard extends StatelessWidget {
                       ModalityBadge(dataType: submission.mediaType ?? 'TEXT'),
                       const SizedBox(width: 8),
                       Text(
-                        'ID: ${submission.id.length > 8 ? submission.id.substring(0, 8) : submission.id}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                        '#${submission.id.length > 8 ? submission.id.substring(0, 8) : submission.id}',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.textMuted,
                           fontFamily: 'monospace',
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -185,8 +217,10 @@ class _SubmissionCard extends StatelessWidget {
                   submission.textContent!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: AppColors.ink,
+                    height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -197,33 +231,43 @@ class _SubmissionCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (submission.validationScore != null)
-                    Row(
-                      children: [
-                        const Icon(Icons.bolt_rounded, size: 14, color: AppColors.mintPrimary),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Score: ${(submission.validationScore! * 100).toStringAsFixed(0)}%',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.mintPrimary,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.mintBg,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: AppColors.mintBorder, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 13,
+                            color: AppColors.mintActive,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Text(
+                            'AI Score: ${(submission.validationScore! * 100).toInt()}%',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                   else
-                    const Text(
-                      'Validation in progress...',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+                    const SizedBox.shrink(),
 
-                  if (submission.rewardAmount != null && submission.rewardAmount! > 0)
+                  if (submission.rewardAmount != null)
                     Text(
                       '+${submission.rewardAmount!.toStringAsFixed(2)} cUSD',
-                      style: const TextStyle(
-                        fontSize: 13,
+                      style: GoogleFonts.bricolageGrotesque(
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.mintPrimary,
+                        color: AppColors.mintActive,
                       ),
                     ),
                 ],

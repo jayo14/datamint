@@ -44,9 +44,11 @@ export function Navbar() {
           className="flex items-center gap-2.5 font-bricolage text-2xl font-bold tracking-tight text-[#0D1F18] transition-transform hover:scale-105"
         >
           <div className="w-10 h-10 rounded-[14px] bg-[#74E3B6] text-[#0D1F18] flex items-center justify-center font-bold text-xl shadow-xs">
-            D
+            ⌘
           </div>
-          <span className="hidden sm:inline">datamint</span>
+          <span className="hidden sm:inline font-bricolage font-extrabold text-2xl tracking-tight text-[#0D1F18]">
+            DataMint
+          </span>
         </Link>
 
         {/* Center Pill Navigation */}

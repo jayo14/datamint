@@ -525,9 +525,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     title,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.ink,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/widgets/common_widgets.dart';
@@ -95,11 +95,17 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
                   ? 'Campaign published to marketplace!'
                   : 'Campaign draft saved successfully.',
             ),
-            backgroundColor: AppColors.mintPrimary,
+            backgroundColor: AppColors.mintActive,
           ),
         );
-        // Switch to campaigns list
-        context.go('/home');
+
+        // Reset
+        setState(() {
+          _currentStep = 0;
+          _titleController.clear();
+          _descriptionController.clear();
+          _instructionsController.clear();
+        });
       }
     } on AppException catch (e) {
       setState(() => _errorMessage = e.message);
@@ -112,109 +118,170 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
-      body: SafeArea(
+      backgroundColor: Colors.transparent,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Wizard Progress Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: Row(
-                  children: [
-                    _buildStepIndicator(0, 'Basics'),
-                    _buildStepDivider(),
-                    _buildStepIndicator(1, 'Rules'),
-                    _buildStepDivider(),
-                    _buildStepIndicator(2, 'Budget'),
-                  ],
-                ),
-              ),
-              const Divider(),
-
-              if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(color: AppColors.error, fontSize: 13),
-                          ),
-                        ),
-                      ],
+              // Header Badge & Title
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const PillBadge(
+                    text: 'Dataset Creation Portal',
+                    icon: Icons.shield_outlined,
+                  ),
+                  Text(
+                    'Step ${_currentStep + 1} of 3',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
                     ),
                   ),
-                ),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-              // Step Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: IndexedStack(
-                    index: _currentStep,
+              Text(
+                'Create Dataset Campaign',
+                style: GoogleFonts.bricolageGrotesque(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.ink,
+                  letterSpacing: -0.6,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Request verified multi-modal AI data and fund audited escrow on Celo',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Stepper Progress Indicators
+              Row(
+                children: [
+                  _buildStepPill(0, 'Fundamentals'),
+                  const SizedBox(width: 6),
+                  _buildStepPill(1, 'Rules & QA'),
+                  const SizedBox(width: 6),
+                  _buildStepPill(2, 'Escrow Budget'),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Error Banner
+              if (_errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.error.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      _buildStep1Basics(),
-                      _buildStep2Rules(),
-                      _buildStep3Budget(),
+                      const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: AppColors.error, fontSize: 12.5),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 16, color: AppColors.error),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => setState(() => _errorMessage = null),
+                      ),
                     ],
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+              ],
 
-              // Bottom Navigation Bar
+              // Card Container
               Container(
-                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : Colors.white,
-                  border: Border(
-                    top: BorderSide(
-                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                    ),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: AppColors.mintBorder,
+                    width: 1.2,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.ink.withValues(alpha: 0.05),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (_currentStep > 0)
-                      Expanded(
-                        child: DataMintButton(
-                          label: 'Back',
-                          isOutlined: true,
-                          onPressed: () => setState(() => _currentStep--),
-                        ),
+                    if (_currentStep == 0) _buildStep1Basics(),
+                    if (_currentStep == 1) _buildStep2Rules(),
+                    if (_currentStep == 2) _buildStep3Budget(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Action Buttons Row
+              Row(
+                children: [
+                  if (_currentStep > 0) ...[
+                    Expanded(
+                      flex: 1,
+                      child: DataMintButton(
+                        label: 'Back',
+                        isOutlined: true,
+                        onPressed: () => setState(() => _currentStep--),
                       ),
-                    if (_currentStep > 0) const SizedBox(width: 12),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  if (_currentStep < 2) ...[
                     Expanded(
                       flex: 2,
                       child: DataMintButton(
-                        label: _currentStep == 2 ? 'Publish Campaign' : 'Next Step',
-                        isLoading: _isLoading,
+                        label: 'Continue',
+                        icon: Icons.arrow_forward_rounded,
                         onPressed: () {
-                          if (_currentStep < 2) {
+                          if (_formKey.currentState!.validate()) {
                             setState(() => _currentStep++);
-                          } else {
-                            _handleSaveAndPublish(publishImmediately: true);
                           }
                         },
                       ),
                     ),
+                  ] else ...[
+                    Expanded(
+                      flex: 2,
+                      child: DataMintButton(
+                        label: 'Fund Escrow & Publish',
+                        icon: Icons.rocket_launch_rounded,
+                        isLoading: _isLoading,
+                        onPressed: () => _handleSaveAndPublish(publishImmediately: true),
+                      ),
+                    ),
                   ],
-                ),
+                ],
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -222,50 +289,44 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
     );
   }
 
-  Widget _buildStepIndicator(int stepIndex, String title) {
-    final isPassed = _currentStep >= stepIndex;
-    final isCurrent = _currentStep == stepIndex;
+  Widget _buildStepPill(int stepIndex, String title) {
+    final isSelected = _currentStep == stepIndex;
+    final isDone = _currentStep > stepIndex;
 
-    return Row(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: isPassed ? AppColors.mintPrimary : Colors.grey.shade400,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: isPassed && !isCurrent
-                ? const Icon(Icons.check, size: 14, color: Colors.black)
-                : Text(
-                    '${stepIndex + 1}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.mint
+              : (isDone ? AppColors.mintBg : Colors.white),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.mintActive
+                : (isDone ? AppColors.mintActive.withValues(alpha: 0.5) : AppColors.mintBorder),
+            width: 1.2,
           ),
         ),
-        const SizedBox(width: 6),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-            color: isPassed ? AppColors.mintPrimary : Colors.grey,
-          ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isDone) ...[
+              const Icon(Icons.check_rounded, size: 14, color: AppColors.mintActive),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? AppColors.ink : AppColors.textMuted,
+              ),
+            ),
+          ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildStepDivider() {
-    return const Expanded(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8),
-        child: Divider(thickness: 1.5),
       ),
     );
   }
@@ -274,14 +335,21 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Step 1: Campaign Fundamentals',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        Text(
+          'Campaign Fundamentals',
+          style: GoogleFonts.bricolageGrotesque(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.ink,
+          ),
         ),
         const SizedBox(height: 16),
 
         // Title
-        const Text('Campaign Title', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const Text(
+          'Campaign Title',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
+        ),
         const SizedBox(height: 6),
         TextFormField(
           controller: _titleController,
@@ -293,20 +361,26 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
         const SizedBox(height: 16),
 
         // Description
-        const Text('Overview & Objective', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const Text(
+          'Overview & Objective',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
+        ),
         const SizedBox(height: 6),
         TextFormField(
           controller: _descriptionController,
           maxLines: 3,
           decoration: const InputDecoration(
-            hintText: 'Explain the goal of this dataset collection...',
+            hintText: 'Explain the purpose and specific requirements for this AI dataset...',
           ),
           validator: (v) => v == null || v.trim().isEmpty ? 'Description is required' : null,
         ),
         const SizedBox(height: 16),
 
         // Data Modality
-        const Text('Data Modality', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const Text(
+          'Data Modality',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -320,7 +394,10 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
         const SizedBox(height: 16),
 
         // Category Dropdown
-        const Text('Domain Category', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const Text(
+          'Domain Category',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
+        ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: _selectedCategory,
@@ -329,7 +406,8 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
             DropdownMenuItem(value: 'AI & Machine Learning', child: Text('AI & Machine Learning')),
             DropdownMenuItem(value: 'Speech & Audio', child: Text('Speech & Audio')),
             DropdownMenuItem(value: 'Computer Vision', child: Text('Computer Vision')),
-            DropdownMenuItem(value: 'Natural Language Processing', child: Text('NLP & Linguistics')),
+            DropdownMenuItem(
+                value: 'Natural Language Processing', child: Text('NLP & Linguistics')),
             DropdownMenuItem(value: 'Healthcare & Science', child: Text('Healthcare & Science')),
           ],
           onChanged: (val) {
@@ -342,35 +420,35 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
 
   Widget _buildModalityOption(String value, String label, IconData icon) {
     final isSelected = _selectedModality == value;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Expanded(
-      child: InkWell(
+      child: GestureDetector(
         onTap: () => setState(() => _selectedModality = value),
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.mintPrimary.withValues(alpha: 0.15)
-                : (isDark ? AppColors.darkSurface : Colors.white),
-            borderRadius: BorderRadius.circular(10),
+            color: isSelected ? AppColors.mintBg : Colors.white,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? AppColors.mintPrimary : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-              width: isSelected ? 1.5 : 1,
+              color: isSelected ? AppColors.mintActive : AppColors.mintBorder,
+              width: isSelected ? 1.6 : 1.2,
             ),
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSelected ? AppColors.mintPrimary : Colors.grey, size: 24),
+              Icon(
+                icon,
+                color: isSelected ? AppColors.mintActive : AppColors.textMuted,
+                size: 24,
+              ),
               const SizedBox(height: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: isSelected ? AppColors.mintPrimary : null,
+                  color: isSelected ? AppColors.ink : AppColors.textMuted,
                 ),
               ),
             ],
@@ -384,23 +462,28 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Step 2: Contributor Guidelines & AI Rules',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        Text(
+          'Contributor Guidelines & AI Rules',
+          style: GoogleFonts.bricolageGrotesque(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.ink,
+          ),
         ),
         const SizedBox(height: 16),
 
         // Instructions
         const Text(
           'Detailed Instructions for Contributors',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
         ),
         const SizedBox(height: 6),
         TextFormField(
           controller: _instructionsController,
-          maxLines: 5,
+          maxLines: 4,
           decoration: const InputDecoration(
-            hintText: 'Specify exact requirements (e.g. background quietness, language accent, text length, lighting)...',
+            hintText:
+                'Specify exact requirements (e.g., quiet background, accent, lighting, format)...',
           ),
           validator: (v) => v == null || v.trim().isEmpty ? 'Instructions are required' : null,
         ),
@@ -409,7 +492,7 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
         // Minimum AI Acceptance Score
         const Text(
           'Minimum AI Confidence Score Threshold (%)',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
         ),
         const SizedBox(height: 6),
         TextFormField(
@@ -425,22 +508,23 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
   }
 
   Widget _buildStep3Budget() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Step 3: Escrow Budget & Pricing',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        Text(
+          'Escrow Budget & Pricing',
+          style: GoogleFonts.bricolageGrotesque(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.ink,
+          ),
         ),
         const SizedBox(height: 16),
 
         // Reward per Submission
         const Text(
           'Reward per Approved Submission (cUSD)',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
         ),
         const SizedBox(height: 6),
         TextFormField(
@@ -458,7 +542,7 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
         // Target Submissions
         const Text(
           'Target Number of Submissions',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
         ),
         const SizedBox(height: 6),
         TextFormField(
@@ -470,16 +554,17 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
             suffixText: 'submissions',
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // Budget Summary Card
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.mintBg,
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+              color: AppColors.mintBorder,
+              width: 1.2,
             ),
           ),
           child: Column(
@@ -487,27 +572,44 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total Escrow Allocation:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Total Escrow Deposit:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                      color: AppColors.ink,
+                    ),
+                  ),
                   Text(
                     '${_totalBudget.toStringAsFixed(2)} cUSD',
-                    style: theme.textTheme.titleMedium?.copyWith(
+                    style: GoogleFonts.bricolageGrotesque(
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.mintPrimary,
+                      color: AppColors.ink,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              const Divider(),
-              const SizedBox(height: 12),
-              const Row(
+              const SizedBox(height: 10),
+              Divider(color: AppColors.mintBorder.withValues(alpha: 0.7)),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.lock_clock_rounded, size: 16, color: AppColors.celoGold),
-                  SizedBox(width: 8),
+                  const Icon(
+                    Icons.shield_outlined,
+                    size: 16,
+                    color: AppColors.mintActive,
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Funds are held securely in DataMint DatasetEscrow on Celo and disbursed trustlessly via EIP-712 payout vouchers.',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      'Funds are locked securely in DataMint smart escrow on Celo and released instantly to contributors upon AI validation approval.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.textMuted.withValues(alpha: 0.9),
+                        height: 1.35,
+                      ),
                     ),
                   ),
                 ],

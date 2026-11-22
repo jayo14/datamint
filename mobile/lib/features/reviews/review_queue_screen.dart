@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../shared/models/models.dart';
@@ -27,7 +28,16 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Review Decision'),
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+            title: Text(
+              'Review Decision',
+              style: GoogleFonts.bricolageGrotesque(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: AppColors.ink,
+              ),
+            ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -35,40 +45,117 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                 children: [
                   Text(
                     'Campaign: ${item.campaignTitle}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.ink,
+                    ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    'Flag Reason: ${item.flagReason}',
-                    style: const TextStyle(color: AppColors.warning, fontSize: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.flag_rounded,
+                          size: 15,
+                          color: AppColors.warning,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            item.flagReason,
+                            style: const TextStyle(
+                              color: AppColors.warning,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Select Decision:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Select Decision:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.ink,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
-                        child: ChoiceChip(
-                          label: const Center(child: Text('Approve')),
-                          selected: decision == 'APPROVE',
-                          selectedColor: AppColors.success.withValues(alpha: 0.2),
-                          onSelected: (_) => setDialogState(() => decision = 'APPROVE'),
-                          showCheckmark: false,
+                        child: GestureDetector(
+                          onTap: () => setDialogState(() => decision = 'APPROVE'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: decision == 'APPROVE'
+                                  ? AppColors.mint
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: decision == 'APPROVE'
+                                    ? AppColors.mintActive
+                                    : AppColors.mintBorder,
+                                width: 1.2,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'Approve',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: ChoiceChip(
-                          label: const Center(child: Text('Reject')),
-                          selected: decision == 'REJECT',
-                          selectedColor: AppColors.error.withValues(alpha: 0.2),
-                          onSelected: (_) => setDialogState(() => decision = 'REJECT'),
-                          showCheckmark: false,
+                        child: GestureDetector(
+                          onTap: () => setDialogState(() => decision = 'REJECT'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: decision == 'REJECT'
+                                  ? AppColors.error.withValues(alpha: 0.15)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: decision == 'REJECT'
+                                    ? AppColors.error
+                                    : AppColors.mintBorder,
+                                width: 1.2,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'Reject',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
                   TextField(
                     controller: notesController,
                     maxLines: 3,
@@ -83,9 +170,10 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
+                child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
               ),
-              ElevatedButton(
+              DataMintButton(
+                label: 'Confirm Decision',
                 onPressed: () async {
                   Navigator.pop(ctx);
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -101,22 +189,17 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                     ref.invalidate(reviewQueueProvider);
                     scaffoldMessenger.showSnackBar(
                       SnackBar(
-                        content: Text('Submission decided as $decision.'),
-                        backgroundColor: decision == 'APPROVE'
-                            ? AppColors.mintPrimary
-                            : AppColors.error,
+                        content: Text('Submission $decision confirmed.'),
+                        backgroundColor:
+                            decision == 'APPROVE' ? AppColors.mintActive : AppColors.error,
                       ),
                     );
                   } catch (e) {
                     scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to decide review: $e'),
-                        backgroundColor: AppColors.error,
-                      ),
+                      SnackBar(content: Text('Action failed: $e'), backgroundColor: AppColors.error),
                     );
                   }
                 },
-                child: const Text('Submit Decision'),
               ),
             ],
           );
@@ -128,16 +211,21 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
   @override
   Widget build(BuildContext context) {
     final queueAsync = ref.watch(reviewQueueProvider);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: RefreshIndicator(
+        color: AppColors.mintActive,
         onRefresh: () async {
           ref.invalidate(reviewQueueProvider);
         },
         child: queueAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          loading: () => const Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.mintActive),
+            ),
+          ),
           error: (err, _) => EmptyStateView(
             icon: Icons.error_outline_rounded,
             title: 'Unable to Load Review Queue',
@@ -145,106 +233,97 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
             actionLabel: 'Retry',
             onAction: () => ref.invalidate(reviewQueueProvider),
           ),
-          data: (queue) {
-            if (queue.isEmpty) {
+          data: (items) {
+            if (items.isEmpty) {
               return const EmptyStateView(
-                icon: Icons.done_all_rounded,
+                icon: Icons.verified_user_outlined,
                 title: 'Review Queue Clear',
-                message: 'No submissions are currently flagged for human intervention.',
+                message:
+                    'All submissions have passed automated AI verification. No manual reviews pending.',
               );
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: queue.length,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              itemCount: items.length,
               itemBuilder: (context, index) {
-                final item = queue[index];
+                final item = items[index];
 
-                return Card(
+                return Container(
                   margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            ModalityBadge(dataType: item.dataType),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.warning.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'AI Score: ${(item.aiScore * 100).toStringAsFixed(0)}%',
-                                style: const TextStyle(
-                                  color: AppColors.warning,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        Text(
-                          item.campaignTitle,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-
-                        // Flag Reason
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkSurface : Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.flag_rounded, size: 16, color: AppColors.warning),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  item.flagReason,
-                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Submission Payload Snippet
-                        if (item.textContent != null) ...[
-                          Text(
-                            item.textContent!,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-
-                        // Review Action Button
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: DataMintButton(
-                            label: 'Review & Decide',
-                            icon: Icons.rate_review_rounded,
-                            onPressed: () => _showDecisionDialog(item),
-                          ),
-                        ),
-                      ],
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: AppColors.mintBorder,
+                      width: 1.2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.ink.withValues(alpha: 0.04),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.campaignTitle,
+                              style: GoogleFonts.bricolageGrotesque(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: AppColors.warning.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: const Text(
+                              'Flagged QA',
+                              style: TextStyle(
+                                color: AppColors.warning,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      Text(
+                        'Reason: ${item.flagReason}',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.textMuted,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: DataMintButton(
+                          label: 'Review Submission',
+                          icon: Icons.rate_review_rounded,
+                          onPressed: () => _showDecisionDialog(item),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },

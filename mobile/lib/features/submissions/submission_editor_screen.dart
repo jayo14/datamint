@@ -73,13 +73,11 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
   Future<void> _initializeDraft() async {
     try {
       final submissionService = ref.read(submissionServiceProvider);
-      // If campaign wasn't passed via routing extra, fetch it
       if (_campaign == null) {
         final marketplaceService = ref.read(marketplaceServiceProvider);
         _campaign = await marketplaceService.getCampaignDetails(widget.campaignId);
       }
 
-      // Create initial draft on backend
       final draft = await submissionService.createDraft(widget.campaignId);
       _draftId = draft.id;
     } catch (e) {
@@ -94,7 +92,6 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
     try {
       if (await _audioRecorder.hasPermission()) {
         const config = RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 128000);
-        // Start recording to temporary path or stream
         await _audioRecorder.start(config, path: '');
         setState(() {
           _isRecording = true;
@@ -142,7 +139,6 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
     }
   }
 
-  // Image Selection Flow
   Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? file = await _picker.pickImage(
@@ -159,7 +155,6 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
     }
   }
 
-  // Final Multi-step Submission Flow
   Future<void> _handleSubmit() async {
     if (_draftId == null) {
       setState(() => _errorMessage = 'Draft session not initialized');
@@ -185,7 +180,6 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
           throw const ValidationException(message: 'Submission text cannot be empty');
         }
 
-        // 1. Update text draft
         setState(() => _statusMessage = 'Saving text content...');
         await submissionService.updateDraft(_draftId!, textContent: text);
         _uploadProgress = 0.6;
@@ -197,7 +191,6 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
         final audioBytes = await File(_recordedAudioPath!).readAsBytes();
         setState(() => _statusMessage = 'Requesting secure upload authorization...');
 
-        // 1. Request presigned upload URL
         final uploadInfo = await submissionService.getUploadUrl(
           _draftId!,
           contentType: 'audio/m4a',
@@ -207,7 +200,6 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
         final uploadUrl = uploadInfo['upload_url'] as String;
         final assetId = uploadInfo['asset_id'] as String;
 
-        // 2. Upload binary payload
         setState(() => _statusMessage = 'Uploading audio payload...');
         await apiClient.uploadBinary(
           uploadUrl: uploadUrl,
@@ -220,7 +212,6 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
           },
         );
 
-        // 3. Confirm upload
         setState(() => _statusMessage = 'Confirming asset storage...');
         await submissionService.confirmUpload(_draftId!, assetId: assetId);
         _uploadProgress = 0.8;
@@ -232,7 +223,6 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
         final imageBytes = await _selectedImage!.readAsBytes();
         setState(() => _statusMessage = 'Requesting secure upload authorization...');
 
-        // 1. Request presigned upload URL
         final uploadInfo = await submissionService.getUploadUrl(
           _draftId!,
           contentType: 'image/jpeg',
@@ -242,7 +232,6 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
         final uploadUrl = uploadInfo['upload_url'] as String;
         final assetId = uploadInfo['asset_id'] as String;
 
-        // 2. Upload binary payload
         setState(() => _statusMessage = 'Uploading image payload...');
         await apiClient.uploadBinary(
           uploadUrl: uploadUrl,
@@ -255,13 +244,11 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
           },
         );
 
-        // 3. Confirm upload
         setState(() => _statusMessage = 'Confirming asset storage...');
         await submissionService.confirmUpload(_draftId!, assetId: assetId);
         _uploadProgress = 0.8;
       }
 
-      // Final step: Submit for AI Validation & Queue Processing
       setState(() {
         _statusMessage = 'Submitting for AI validation pipeline...';
         _uploadProgress = 0.95;
@@ -271,11 +258,10 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
       _uploadProgress = 1.0;
 
       if (mounted) {
-        // Show success snackbar and navigate to submission detail
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Submission successful! AI validation started.'),
-            backgroundColor: AppColors.mintPrimary,
+            backgroundColor: AppColors.mintActive,
           ),
         );
         context.go('/submissions/${finalSubmission.id}', extra: finalSubmission);
@@ -296,162 +282,228 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
 
     if (_isInitializing) {
       return Scaffold(
-        appBar: AppBar(title: const Text('New Submission')),
-        body: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.mintBg,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text('New Submission', style: TextStyle(fontFamily: 'Bricolage Grotesque', fontWeight: FontWeight.w700)),
+        ),
+        body: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.mintActive)),
       );
     }
 
     final modality = DataModalityExt.fromString(_campaign?.dataType ?? 'TEXT');
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.darkBg : AppColors.mintBg,
       appBar: AppBar(
-        title: Text('${_campaign?.title ?? "Campaign"} Submission'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(
+          '${_campaign?.title ?? "Campaign"} Submission',
+          style: const TextStyle(
+            fontFamily: 'Bricolage Grotesque',
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Instructions banner
-            if (_campaign?.instructions != null) ...[
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
+      body: Stack(
+        children: [
+          const Positioned(
+            top: -40,
+            right: -40,
+            child: FloatingCoinGlow(size: 160, color: AppColors.mintPrimary, opacity: 0.25),
+          ),
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Instructions banner
+                if (_campaign?.instructions != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline_rounded, size: 16, color: AppColors.mintPrimary),
-                        SizedBox(width: 6),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.mintPrimary.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.mintActive),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Instructions',
+                              style: TextStyle(
+                                fontFamily: 'Bricolage Grotesque',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: isDark ? AppColors.darkTextPrimary : AppColors.ink,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
                         Text(
-                          'Instructions',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          _campaign!.instructions!,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            height: 1.5,
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.textMuted,
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _campaign!.instructions!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                      ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                if (_errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-
-            if (_errorMessage != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: AppColors.error, fontSize: 13),
-                      ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(fontFamily: 'Inter', color: AppColors.error, fontSize: 13),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // Modality-Specific Input
+                if (modality == DataModality.text) ...[
+                  _buildTextInputSection(isDark),
+                ] else if (modality == DataModality.voice) ...[
+                  _buildVoiceInputSection(isDark),
+                ] else if (modality == DataModality.image) ...[
+                  _buildImageInputSection(isDark),
+                ],
+
+                const SizedBox(height: 28),
+
+                // Upload Progress Bar
+                if (_isSubmitting) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: _uploadProgress,
+                      minHeight: 8,
+                      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintActive),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      _statusMessage ?? 'Processing...',
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textMuted),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // Submit Button
+                DataMintButton(
+                  label: 'Submit for AI Verification',
+                  icon: Icons.send_rounded,
+                  width: double.infinity,
+                  isLoading: _isSubmitting,
+                  onPressed: _handleSubmit,
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
-
-            // Modality-Specific Input
-            if (modality == DataModality.text) ...[
-              _buildTextInputSection(),
-            ] else if (modality == DataModality.voice) ...[
-              _buildVoiceInputSection(),
-            ] else if (modality == DataModality.image) ...[
-              _buildImageInputSection(),
-            ],
-
-            const SizedBox(height: 28),
-
-            // Upload Progress Bar
-            if (_isSubmitting) ...[
-              LinearProgressIndicator(
-                value: _uploadProgress,
-                backgroundColor: isDark ? AppColors.darkCard : Colors.grey.shade200,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintPrimary),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  _statusMessage ?? 'Processing...',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-
-            // Submit Button
-            DataMintButton(
-              label: 'Submit for AI Verification',
-              icon: Icons.send_rounded,
-              width: double.infinity,
-              isLoading: _isSubmitting,
-              onPressed: _handleSubmit,
+                const SizedBox(height: 32),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTextInputSection() {
+  Widget _buildTextInputSection(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Text Data Content',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          style: TextStyle(
+            fontFamily: 'Bricolage Grotesque',
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: isDark ? AppColors.darkTextPrimary : AppColors.ink,
+          ),
         ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _textController,
-          maxLines: 10,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Enter high-quality text data adhering to campaign instructions...',
-            alignLabelWithHint: true,
-            helperText: '${_textController.text.length} characters',
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : AppColors.lightCard,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: TextField(
+            controller: _textController,
+            maxLines: 8,
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Enter high-quality text data adhering to campaign instructions...',
+              hintStyle: const TextStyle(color: AppColors.textMuted),
+              helperText: '${_textController.text.length} characters',
+              helperStyle: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: AppColors.textMuted),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildVoiceInputSection() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
+  Widget _buildVoiceInputSection(bool isDark) {
     final minutes = (_recordDurationSeconds ~/ 60).toString().padLeft(2, '0');
     final seconds = (_recordDurationSeconds % 60).toString().padLeft(2, '0');
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? AppColors.darkCard : AppColors.lightCard,
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
         ),
@@ -461,63 +513,65 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
           // Timer display
           Text(
             '$minutes:$seconds',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: _isRecording ? AppColors.error : AppColors.mintPrimary,
+            style: TextStyle(
+              fontFamily: 'Bricolage Grotesque',
+              fontSize: 36,
+              fontWeight: FontWeight.w800,
+              color: _isRecording ? AppColors.error : AppColors.ink,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Record / Stop Button
           GestureDetector(
             onTap: _isRecording ? _stopRecording : _startRecording,
             child: Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 color: _isRecording
                     ? AppColors.error.withValues(alpha: 0.15)
-                    : AppColors.mintPrimary.withValues(alpha: 0.15),
+                    : AppColors.mintPrimary.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: _isRecording ? AppColors.error : AppColors.mintPrimary,
-                  width: 2,
+                  color: _isRecording ? AppColors.error : AppColors.mintActive,
+                  width: 2.5,
                 ),
               ),
               child: Icon(
                 _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                size: 40,
-                color: _isRecording ? AppColors.error : AppColors.mintPrimary,
+                size: 42,
+                color: _isRecording ? AppColors.error : AppColors.ink,
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             _isRecording ? 'Recording... Tap to stop' : 'Tap to start recording',
-            style: const TextStyle(fontSize: 13, color: Colors.grey),
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: AppColors.textMuted),
           ),
 
           if (_recordedAudioPath != null && !_isRecording) ...[
             const SizedBox(height: 20),
-            const Divider(),
+            Divider(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
                   icon: Icon(_isPlayingAudio ? Icons.pause_circle_filled : Icons.play_circle_fill),
-                  iconSize: 36,
-                  color: AppColors.mintPrimary,
+                  iconSize: 38,
+                  color: AppColors.mintActive,
                   onPressed: _toggleAudioPlayback,
                 ),
                 const SizedBox(width: 8),
                 const Text(
                   'Preview Recording',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  style: TextStyle(fontFamily: 'Bricolage Grotesque', fontWeight: FontWeight.w700, fontSize: 14),
                 ),
                 const Spacer(),
                 TextButton.icon(
                   icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Re-record'),
+                  label: const Text('Re-record', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                   onPressed: () {
                     setState(() {
                       _recordedAudioPath = null;
@@ -533,10 +587,7 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
     );
   }
 
-  Widget _buildImageInputSection() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
+  Widget _buildImageInputSection(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -545,13 +596,13 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
             height: 220,
             width: double.infinity,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
               ),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(24),
               child: kIsWeb
                   ? Image.network(_selectedImage!.path, fit: BoxFit.cover)
                   : Image.file(File(_selectedImage!.path), fit: BoxFit.cover),
@@ -563,12 +614,12 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
             children: [
               Text(
                 _selectedImage!.name,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textMuted),
                 overflow: TextOverflow.ellipsis,
               ),
               TextButton.icon(
                 icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error),
-                label: const Text('Change Image', style: TextStyle(color: AppColors.error)),
+                label: const Text('Change Image', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
                 onPressed: () => setState(() => _selectedImage = null),
               ),
             ],
@@ -577,26 +628,36 @@ class _SubmissionEditorScreenState extends ConsumerState<SubmissionEditorScreen>
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              color: isDark ? AppColors.darkCard : AppColors.lightCard,
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(
                 color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
               ),
             ),
             child: Column(
               children: [
-                const Icon(Icons.image_outlined, size: 48, color: Colors.grey),
-                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.mintPrimary.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.image_outlined, size: 36, color: AppColors.ink),
+                ),
+                const SizedBox(height: 14),
                 Text(
                   'Select or Capture Image',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  style: TextStyle(
+                    fontFamily: 'Bricolage Grotesque',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.ink,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 const Text(
                   'Supports JPG, PNG up to 10MB',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 20),
                 Row(

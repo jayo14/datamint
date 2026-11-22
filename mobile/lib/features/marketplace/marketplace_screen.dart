@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../shared/models/models.dart';
@@ -15,7 +16,9 @@ class MarketplaceScreen extends ConsumerWidget {
     final campaignsAsync = ref.watch(marketplaceCampaignsProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: RefreshIndicator(
+        color: AppColors.mintActive,
         onRefresh: () async {
           ref.invalidate(marketplaceCampaignsProvider);
         },
@@ -24,7 +27,7 @@ class MarketplaceScreen extends ConsumerWidget {
             // Search & Filter Header
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -35,27 +38,54 @@ class MarketplaceScreen extends ConsumerWidget {
                             filter.copyWith(search: val.trim().isNotEmpty ? val.trim() : null);
                       },
                       decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
                         hintText: 'Search dataset campaigns, tasks...',
-                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                        hintStyle: TextStyle(
+                          color: AppColors.textMuted.withValues(alpha: 0.7),
+                          fontSize: 14,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          size: 20,
+                          color: AppColors.mintActive,
+                        ),
                         suffixIcon: filter.search != null
                             ? IconButton(
-                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                icon: const Icon(
+                                  Icons.clear_rounded,
+                                  size: 18,
+                                  color: AppColors.textMuted,
+                                ),
                                 onPressed: () {
                                   ref.read(marketplaceFilterProvider.notifier).state =
                                       filter.copyWith(search: null);
                                 },
                               )
                             : null,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(999),
+                          borderSide: const BorderSide(color: AppColors.mintBorder, width: 1.2),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(999),
+                          borderSide: const BorderSide(color: AppColors.mintBorder, width: 1.2),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(999),
+                          borderSide: const BorderSide(color: AppColors.mintActive, width: 1.6),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
+
                     // Modality Filter Chips
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
                           _buildFilterChip(
-                            context: context,
                             label: 'All Datasets',
                             isSelected: filter.dataType == null,
                             onSelected: () {
@@ -65,7 +95,6 @@ class MarketplaceScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 8),
                           _buildFilterChip(
-                            context: context,
                             label: 'Text',
                             icon: Icons.text_snippet_rounded,
                             isSelected: filter.dataType == 'TEXT',
@@ -76,7 +105,6 @@ class MarketplaceScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 8),
                           _buildFilterChip(
-                            context: context,
                             label: 'Voice / Audio',
                             icon: Icons.mic_rounded,
                             isSelected: filter.dataType == 'VOICE',
@@ -87,7 +115,6 @@ class MarketplaceScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 8),
                           _buildFilterChip(
-                            context: context,
                             label: 'Image',
                             icon: Icons.image_rounded,
                             isSelected: filter.dataType == 'IMAGE',
@@ -108,7 +135,10 @@ class MarketplaceScreen extends ConsumerWidget {
             campaignsAsync.when(
               loading: () => const SliverFillRemaining(
                 child: Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.mintActive),
+                  ),
                 ),
               ),
               error: (err, _) => SliverFillRemaining(
@@ -137,7 +167,7 @@ class MarketplaceScreen extends ConsumerWidget {
                 }
 
                 return SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -160,40 +190,55 @@ class MarketplaceScreen extends ConsumerWidget {
   }
 
   Widget _buildFilterChip({
-    required BuildContext context,
     required String label,
     IconData? icon,
     required bool isSelected,
     required VoidCallback onSelected,
   }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return FilterChip(
-      avatar: icon != null
-          ? Icon(
-              icon,
-              size: 16,
-              color: isSelected ? Colors.black : (isDark ? Colors.white70 : Colors.black87),
-            )
-          : null,
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => onSelected(),
-      selectedColor: AppColors.mintPrimary,
-      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.black : (isDark ? Colors.white : Colors.black),
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-        fontSize: 12,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? AppColors.mintPrimary : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+    return GestureDetector(
+      onTap: onSelected,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.mint : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSelected ? AppColors.mintActive : AppColors.mintBorder,
+            width: isSelected ? 1.5 : 1.2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.mintActive.withValues(alpha: 0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected ? AppColors.ink : AppColors.textMuted,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? AppColors.ink : AppColors.textMuted,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 12.5,
+              ),
+            ),
+          ],
         ),
       ),
-      showCheckmark: false,
     );
   }
 }
@@ -206,24 +251,36 @@ class _CampaignCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     final progress = campaign.maxSubmissions > 0
         ? (campaign.totalSubmissions / campaign.maxSubmissions).clamp(0.0, 1.0)
         : 0.0;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: AppColors.mintBorder,
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.ink.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(28),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Badges
+              // Top Badges Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -232,112 +289,180 @@ class _CampaignCard extends StatelessWidget {
                       ModalityBadge(dataType: campaign.dataType),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkSurface : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(6),
+                          color: AppColors.mintBg,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: AppColors.mintBorder,
+                            width: 1,
+                          ),
                         ),
                         child: Text(
-                          campaign.category,
-                          style: TextStyle(
+                          campaign.category ?? 'AI Training',
+                          style: const TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  // Escrow Verified Badge
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.verified_rounded,
-                        size: 14,
-                        color: campaign.onchainCampaignId != null
-                            ? AppColors.mintPrimary
-                            : Colors.grey,
+
+                  // Reward Badge Pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.mintBg,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: AppColors.mintActive.withValues(alpha: 0.4),
+                        width: 1.2,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        campaign.onchainCampaignId != null ? 'Escrow Funded' : 'Pending Escrow',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: campaign.onchainCampaignId != null
-                              ? AppColors.mintPrimary
-                              : Colors.grey,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.payments_rounded,
+                          size: 15,
+                          color: AppColors.mintActive,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 5),
+                        Text(
+                          '${campaign.rewardPerSubmission.toStringAsFixed(2)} cUSD',
+                          style: const TextStyle(
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
-              // Title
+              // Campaign Title
               Text(
                 campaign.title,
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: GoogleFonts.bricolageGrotesque(
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: AppColors.ink,
+                  letterSpacing: -0.4,
+                  height: 1.2,
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 6),
 
               // Description
               Text(
                 campaign.description,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 14),
-
-              // Progress Bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  backgroundColor: isDark ? AppColors.darkSurface : Colors.grey.shade200,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintPrimary),
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                  height: 1.4,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-              // Footer: Submissions count and Reward
+              // Progress Bar
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${campaign.totalSubmissions} of ${campaign.maxSubmissions} tasks completed',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      Text(
+                        '${(progress * 100).toInt()}%',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.mintActive,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 7,
+                      backgroundColor: AppColors.mintBg,
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintActive),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Bottom Action Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${campaign.totalSubmissions} / ${campaign.maxSubmissions} submissions',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                    ),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.shield_outlined,
+                        size: 14,
+                        color: AppColors.mintActive,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Audited Escrow',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ],
                   ),
-                  // Reward Pill
+
+                  // Submit Pill Button
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.mintPrimary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
+                      color: AppColors.mint,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.mint.withValues(alpha: 0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: Row(
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.monetization_on_rounded, size: 14, color: AppColors.mintPrimary),
-                        const SizedBox(width: 4),
                         Text(
-                          '+${campaign.rewardPerSubmission.toStringAsFixed(2)} cUSD',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.mintPrimary,
+                          'Contribute',
+                          style: TextStyle(
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
                           ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: AppColors.ink,
                         ),
                       ],
                     ),

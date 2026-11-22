@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/widgets/common_widgets.dart';
@@ -44,7 +45,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Reward claimed successfully on Celo!'),
-            backgroundColor: AppColors.mintPrimary,
+            backgroundColor: AppColors.mintActive,
           ),
         );
       }
@@ -69,37 +70,39 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
   Widget build(BuildContext context) {
     final submissionsAsync = ref.watch(mySubmissionsProvider);
     final walletState = ref.watch(walletStateProvider);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: RefreshIndicator(
+        color: AppColors.mintActive,
         onRefresh: () async {
           ref.invalidate(mySubmissionsProvider);
           await ref.read(walletStateProvider.notifier).refreshBalances();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Earnings Summary Card
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isDark
-                        ? [const Color(0xFF064E3B), const Color(0xFF0F172A)]
-                        : [const Color(0xFFD1FAE5), const Color(0xFFECFDF5)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
                   border: Border.all(
-                    color: AppColors.mintPrimary.withValues(alpha: 0.3),
+                    color: AppColors.mintBorder,
+                    width: 1.4,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.ink.withValues(alpha: 0.06),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,26 +110,31 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Celo Wallet Balance',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        const PillBadge(
+                          text: 'Audited Smart Escrow',
+                          icon: Icons.shield_outlined,
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: AppColors.celoGold.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
+                            color: AppColors.mintBg,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: AppColors.mintBorder,
+                              width: 1,
+                            ),
                           ),
                           child: const Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.link_rounded, size: 12, color: AppColors.celoGold),
                               SizedBox(width: 4),
                               Text(
-                                'Celo Sepolia',
+                                'Celo L2',
                                 style: TextStyle(
-                                  color: AppColors.celoGold,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10,
+                                  color: AppColors.ink,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11,
                                 ),
                               ),
                             ],
@@ -134,43 +142,97 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${walletState.cusdBalance.toStringAsFixed(2)} cUSD',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.mintPrimary,
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Celo Wallet cUSD Balance',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${walletState.celoBalance.toStringAsFixed(4)} CELO',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                      '${walletState.cusdBalance.toStringAsFixed(2)} cUSD',
+                      style: GoogleFonts.bricolageGrotesque(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.ink,
+                        letterSpacing: -0.8,
                       ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          '${walletState.celoBalance.toStringAsFixed(4)} CELO',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: const BoxDecoration(
+                            color: AppColors.mintBorder,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Sub-Second Settlement',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.mintActive,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
 
-              const Text(
-                'Ready to Claim',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              // Ready to Claim Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Ready to Claim',
+                    style: GoogleFonts.bricolageGrotesque(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  const PillBadge(
+                    text: 'EIP-712 Signed',
+                    icon: Icons.verified_rounded,
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               const Text(
-                'Verified submissions with signed EIP-712 payout vouchers',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                'AI-verified submissions ready for instant on-chain escrow withdrawal',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textMuted,
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
               submissionsAsync.when(
                 loading: () => const Center(
                   child: Padding(
                     padding: EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.mintActive),
+                    ),
                   ),
                 ),
                 error: (err, _) => EmptyStateView(
@@ -186,24 +248,44 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(28),
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkCard : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                          color: AppColors.mintBorder,
+                          width: 1.2,
                         ),
                       ),
-                      child: const Column(
+                      child: Column(
                         children: [
-                          Icon(Icons.check_circle_outline_rounded, size: 40, color: Colors.grey),
-                          SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: const BoxDecoration(
+                              color: AppColors.mintBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check_circle_outline_rounded,
+                              size: 32,
+                              color: AppColors.mintActive,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           Text(
                             'All Caught Up!',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: GoogleFonts.bricolageGrotesque(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.ink,
+                            ),
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            'No pending unclaimed rewards at this time.',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'No pending unclaimed rewards. Submit more data to earn cUSD.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -214,118 +296,75 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                     children: claimable.map((item) {
                       final isClaiming = _claimingMap[item.id] ?? false;
 
-                      return Card(
+                      return Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: AppColors.mintPrimary.withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.verified_rounded,
-                                  color: AppColors.mintPrimary,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Submission #${item.id.length > 8 ? item.id.substring(0, 8) : item.id}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '+${item.rewardAmount?.toStringAsFixed(2) ?? "0.00"} cUSD',
-                                      style: const TextStyle(
-                                        color: AppColors.mintPrimary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              DataMintButton(
-                                label: 'Claim',
-                                icon: Icons.arrow_downward_rounded,
-                                isLoading: isClaiming,
-                                onPressed: () => _handleClaim(item),
-                              ),
-                            ],
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: AppColors.mintBorder,
+                            width: 1.2,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.ink.withValues(alpha: 0.04),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                color: AppColors.mintBg,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.verified_rounded,
+                                color: AppColors.mintActive,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Submission #${item.id.length > 8 ? item.id.substring(0, 8) : item.id}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                      color: AppColors.ink,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '+${item.rewardAmount?.toStringAsFixed(2) ?? "0.00"} cUSD',
+                                    style: GoogleFonts.bricolageGrotesque(
+                                      color: AppColors.mintActive,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            DataMintButton(
+                              label: 'Claim',
+                              icon: Icons.payments_outlined,
+                              isLoading: isClaiming,
+                              onPressed: isClaiming ? null : () => _handleClaim(item),
+                            ),
+                          ],
                         ),
                       );
                     }).toList(),
                   );
                 },
-              ),
-              const SizedBox(height: 24),
-
-              const Text(
-                'Settled Payouts History',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 12),
-
-              submissionsAsync.maybeWhen(
-                data: (submissions) {
-                  final settled = submissions
-                      .where((s) => s.claimTxHash != null && s.claimTxHash!.isNotEmpty)
-                      .toList();
-
-                  if (settled.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: Text(
-                          'No on-chain settled payouts yet.',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return Column(
-                    children: settled.map((item) {
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: const Icon(Icons.check_circle_rounded, color: AppColors.success),
-                          title: Text(
-                            '+${item.rewardAmount?.toStringAsFixed(2) ?? ""} cUSD',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                          subtitle: Text(
-                            item.claimTxHash!,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 11,
-                              color: Colors.grey,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: const Text(
-                            'Settled',
-                            style: TextStyle(
-                              color: AppColors.success,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  );
-                },
-                orElse: () => const SizedBox.shrink(),
               ),
             ],
           ),
