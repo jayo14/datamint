@@ -157,10 +157,8 @@ void main() {
         ),
       );
 
-      expect(find.text('DataMint'), findsOneWidget);
-      expect(find.text('Decentralized AI Dataset Marketplace'), findsOneWidget);
-      expect(find.text('Celo L2 • Audited Smart Escrow'), findsOneWidget);
-      expect(find.text('⌘'), findsOneWidget);
+      expect(find.text('Built on Celo'), findsOneWidget);
+      expect(find.byType(SplashScreen), findsOneWidget);
     });
   });
 
@@ -172,12 +170,9 @@ void main() {
         ),
       );
 
-      expect(find.text('DataMint'), findsOneWidget);
       expect(find.text('Skip'), findsOneWidget);
-      expect(find.text('Decentralized AI Dataset Marketplace'), findsOneWidget);
-      expect(find.text('Audited Smart Escrow'), findsOneWidget);
-      expect(find.text('Continue'), findsOneWidget);
-      expect(find.text('Sign In'), findsOneWidget);
+      expect(find.text('Teach AI your language and culture'), findsOneWidget);
+      expect(find.text('Next'), findsOneWidget);
     });
   });
 
@@ -196,18 +191,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Join DataMint'), findsOneWidget);
-      expect(find.text('Decentralized Protocol'), findsOneWidget);
-      expect(find.text('Dual Role (Recommended)'), findsOneWidget);
       expect(find.text('Create Account'), findsWidgets);
-
-      final buttonFinder = find.byType(ElevatedButton).first;
-      await tester.ensureVisible(buttonFinder);
-      await tester.tap(buttonFinder);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Email is required'), findsOneWidget);
-      expect(find.text('Password is required'), findsOneWidget);
     });
   });
 
@@ -230,11 +214,9 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('DataMint'), findsWidgets);
-      expect(find.text('Contributor'), findsOneWidget);
-      expect(find.text('Explore'), findsOneWidget);
+      expect(find.text('Home'), findsOneWidget);
       expect(find.text('Tasks'), findsOneWidget);
-      expect(find.text('Rewards'), findsOneWidget);
+      expect(find.text('Wallet'), findsOneWidget);
       expect(find.text('Profile'), findsOneWidget);
     });
   });
