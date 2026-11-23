@@ -148,10 +148,12 @@ class MintButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final MintButtonVariant variant;
   final IconData? icon;
+  final IconData? trailingIcon;
   final bool isLoading;
   final bool isSmall;
   final double? width;
   final bool enabled;
+  final bool isGhost;
 
   const MintButton({
     super.key,
@@ -159,10 +161,12 @@ class MintButton extends StatelessWidget {
     required this.onPressed,
     this.variant = MintButtonVariant.primary,
     this.icon,
+    this.trailingIcon,
     this.isLoading = false,
     this.isSmall = false,
     this.width,
     this.enabled = true,
+    this.isGhost = false,
   });
 
   @override
@@ -171,7 +175,9 @@ class MintButton extends StatelessWidget {
     Color fg;
     Border? border;
 
-    switch (variant) {
+    final effectiveVariant = isGhost ? MintButtonVariant.ghost : variant;
+
+    switch (effectiveVariant) {
       case MintButtonVariant.primary:
         bg = AppColors.mint;
         fg = AppColors.ink;
@@ -191,10 +197,12 @@ class MintButton extends StatelessWidget {
         break;
     }
 
-    final effectiveHeight = isSmall ? 40.0 : (variant == MintButtonVariant.text ? 48.0 : 56.0);
-    final effectivePadding = isSmall
-        ? const EdgeInsets.symmetric(horizontal: 16)
-        : const EdgeInsets.symmetric(horizontal: 24);
+    final effectiveHeight = isSmall ? 40.0 : (effectiveVariant == MintButtonVariant.text ? 48.0 : 56.0);
+    final effectivePadding = width != null
+        ? const EdgeInsets.symmetric(horizontal: 12)
+        : (isSmall
+            ? const EdgeInsets.symmetric(horizontal: 16)
+            : const EdgeInsets.symmetric(horizontal: 24));
 
     return Opacity(
       opacity: enabled ? 1.0 : 0.45,
@@ -239,6 +247,10 @@ class MintButton extends StatelessWidget {
                             color: fg,
                           ),
                         ),
+                        if (trailingIcon != null) ...[
+                          const SizedBox(width: 8),
+                          Icon(trailingIcon, size: isSmall ? 18 : 20, color: fg),
+                        ],
                       ],
                     ),
             ),
@@ -686,14 +698,15 @@ class MintTypePill extends StatelessWidget {
 // ==========================================
 class MintBackButton extends StatelessWidget {
   final VoidCallback? onPressed;
+  final VoidCallback? onTap;
   final Color? color;
 
-  const MintBackButton({super.key, this.onPressed, this.color});
+  const MintBackButton({super.key, this.onPressed, this.onTap, this.color});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed ?? () => Navigator.of(context).maybePop(),
+      onTap: onTap ?? onPressed ?? () => Navigator.of(context).maybePop(),
       child: Container(
         width: 44,
         height: 44,
@@ -916,7 +929,7 @@ class MintFloatingTabBar extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: 80,
-                  height: 54,
+                  height: 56,
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.ink : Colors.transparent,
                     borderRadius: BorderRadius.circular(999),
@@ -926,14 +939,14 @@ class MintFloatingTabBar extends StatelessWidget {
                     children: [
                       Icon(
                         item['icon'] as IconData,
-                        size: 22,
+                        size: 20,
                         color: isSelected ? AppColors.mint : AppColors.text,
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 1),
                       Text(
                         item['label'] as String,
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: isSelected ? Colors.white : AppColors.text,
                         ),

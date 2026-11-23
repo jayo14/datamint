@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:datamint_mobile/app/theme/app_theme.dart';
 import 'package:datamint_mobile/features/auth/auth_screens.dart';
 
 void main() {
