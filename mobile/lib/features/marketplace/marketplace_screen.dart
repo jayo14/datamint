@@ -299,7 +299,7 @@ class _CampaignCard extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          campaign.category ?? 'AI Training',
+                          campaign.category.isEmpty ? 'AI Training' : campaign.category,
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
