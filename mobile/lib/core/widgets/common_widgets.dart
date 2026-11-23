@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_theme.dart';
 import '../constants/app_constants.dart';
+import 'mint_components.dart';
+
+export 'mint_components.dart';
 
 class DataMintButton extends StatelessWidget {
   final String label;
@@ -25,70 +28,14 @@ class DataMintButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = color ?? AppColors.mintPrimary;
-
-    final Widget childContent = Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (isLoading)
-          SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isOutlined ? effectiveColor : AppColors.ink,
-              ),
-            ),
-          )
-        else ...[
-          if (icon != null) ...[
-            Icon(icon, size: 18),
-            const SizedBox(width: 8),
-          ],
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-          ),
-        ],
-      ],
+    return MintButton(
+      label: label,
+      onPressed: onPressed,
+      isLoading: isLoading,
+      icon: icon,
+      variant: isOutlined ? MintButtonVariant.ghost : MintButtonVariant.primary,
+      width: width,
     );
-
-    final button = isOutlined
-        ? OutlinedButton(
-            onPressed: isLoading ? null : onPressed,
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: effectiveColor, width: 1.5),
-              foregroundColor: effectiveColor == AppColors.mintPrimary
-                  ? AppColors.ink
-                  : effectiveColor,
-              backgroundColor: Colors.white.withValues(alpha: 0.9),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
-            ),
-            child: childContent,
-          )
-        : ElevatedButton(
-            onPressed: isLoading ? null : onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: effectiveColor,
-              foregroundColor: AppColors.ink,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
-            ),
-            child: childContent,
-          );
-
-    if (width != null) {
-      return SizedBox(width: width, child: button);
-    }
-    return button;
   }
 }
 
@@ -125,8 +72,8 @@ class DataMintLogo extends StatelessWidget {
           ),
           alignment: Alignment.center,
           child: Text(
-            '⌘',
-            style: TextStyle(
+            'D',
+            style: GoogleFonts.bricolageGrotesque(
               fontSize: size * 0.55,
               fontWeight: FontWeight.bold,
               color: AppColors.ink,
@@ -135,12 +82,12 @@ class DataMintLogo extends StatelessWidget {
           ),
         ),
         if (showText) ...[
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Text(
-            'DataMint',
+            'datamint',
             style: GoogleFonts.bricolageGrotesque(
-              fontSize: size * 0.58,
-              fontWeight: FontWeight.w800,
+              fontSize: size * 0.55,
+              fontWeight: FontWeight.w700,
               color: textColor ?? AppColors.ink,
               letterSpacing: -0.6,
             ),
@@ -328,15 +275,15 @@ class ModalityBadge extends StatelessWidget {
     switch (modality) {
       case DataModality.text:
         icon = Icons.text_snippet_rounded;
-        color = const Color(0xFF3B82F6); // Blue
+        color = const Color(0xFF3B82F6);
         break;
       case DataModality.voice:
         icon = Icons.mic_rounded;
-        color = const Color(0xFF8B5CF6); // Purple
+        color = const Color(0xFF8B5CF6);
         break;
       case DataModality.image:
         icon = Icons.image_rounded;
-        color = AppColors.mintActive; // Mint emerald
+        color = AppColors.mintActive;
         break;
     }
 
