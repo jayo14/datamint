@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../app/theme/app_theme.dart';
-import '../../core/widgets/common_widgets.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import '../../core/widgets/mint_components.dart';
 import '../../shared/models/models.dart';
 import '../../shared/providers/app_providers.dart';
 
@@ -19,196 +19,216 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
-  Future<void> _handleMarkAsRead(NotificationModel notification) async {
-    if (notification.isRead) return;
-    try {
-      final service = ref.read(notificationServiceProvider);
-      await service.markAsRead(notification.id);
-      ref.invalidate(notificationsListProvider);
-      ref.invalidate(unreadNotificationsCountProvider);
-    } catch (_) {}
-  }
+  final Set<int> _readIds = {};
 
   @override
   Widget build(BuildContext context) {
-    final notificationsAsync = ref.watch(notificationsListProvider);
-
     return Scaffold(
-      backgroundColor: AppColors.mintBg,
-      appBar: AppBar(
-        titleSpacing: 0,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Notifications',
-          style: GoogleFonts.bricolageGrotesque(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.ink,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: AppColors.ink),
-      ),
-      body: Stack(
-        children: [
-          const Positioned(
-            top: -40,
-            right: -40,
-            child: FloatingCoinGlow(
-              size: 200,
-              color: AppColors.mint,
-              opacity: 0.35,
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned(
+              top: 14,
+              left: 20,
+              child: MintBackButton(
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
+              ),
             ),
-          ),
+            Positioned.fill(
+              top: 70,
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Notifications',
+                        style: TextStyle(
+                          fontFamily: 'Bricolage Grotesque',
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0D1F18),
+                          letterSpacing: -0.8,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _readIds.addAll([1, 2, 3, 4, 5]);
+                          });
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'Mark all read',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF087A52),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Today',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF3F5F52),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildNotificationItem(
+                    id: 1,
+                    isDefaultUnread: true,
+                    icon: Symbols.paid,
+                    iconBg: const Color(0xFF74E3B6),
+                    title: '+0.50 cUSD received',
+                    subtitle: 'Your voice task was approved · 2m',
+                    onTap: () => context.push('/receipt'),
+                  ),
+                  _buildNotificationItem(
+                    id: 2,
+                    isDefaultUnread: true,
+                    icon: Symbols.checklist,
+                    iconBg: const Color(0xFFFFF1B8),
+                    title: 'New tasks in Yoruba',
+                    subtitle: '12 tasks just opened up · 1h',
+                    onTap: () => context.go('/home'),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Earlier',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF3F5F52),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildNotificationItem(
+                    id: 3,
+                    isDefaultUnread: false,
+                    icon: Symbols.local_fire_department,
+                    iconBg: const Color(0xFFFFC9B0),
+                    title: 'Keep your 4-day streak',
+                    subtitle: 'One task today keeps it going · Yesterday',
+                  ),
+                  _buildNotificationItem(
+                    id: 4,
+                    isDefaultUnread: false,
+                    icon: Symbols.south_west,
+                    iconBg: Colors.white,
+                    hasBorder: true,
+                    title: 'Cash out sent',
+                    subtitle: '5.00 cUSD arrived in MiniPay · Yesterday',
+                  ),
+                  _buildNotificationItem(
+                    id: 5,
+                    isDefaultUnread: false,
+                    icon: Symbols.info,
+                    iconBg: const Color(0xFFD9F3FF),
+                    title: 'Task not approved',
+                    subtitle: 'Noise was high. Your reward is safe · 2d',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          RefreshIndicator(
-            color: AppColors.mintActive,
-            onRefresh: () async {
-              ref.invalidate(notificationsListProvider);
-              ref.invalidate(unreadNotificationsCountProvider);
-            },
-            child: notificationsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.mintActive),
+  Widget _buildNotificationItem({
+    required int id,
+    required bool isDefaultUnread,
+    required IconData icon,
+    required Color iconBg,
+    bool hasBorder = false,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+  }) {
+    final isUnread = isDefaultUnread && !_readIds.contains(id);
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _readIds.add(id);
+        });
+        if (onTap != null) onTap();
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(14),
+                border: hasBorder ? Border.all(color: const Color(0xFFD5EDE2)) : null,
+              ),
+              child: Icon(
+                icon,
+                size: 22,
+                color: const Color(0xFF0D1F18),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0D1F18),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      color: Color(0xFF3F5F52),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isUnread)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0B9E6B),
+                  shape: BoxShape.circle,
                 ),
               ),
-              error: (err, _) => EmptyStateView(
-                icon: Icons.error_outline_rounded,
-                title: 'Unable to Load Notifications',
-                message: err.toString(),
-                actionLabel: 'Retry',
-                onAction: () => ref.invalidate(notificationsListProvider),
-              ),
-              data: (notifications) {
-                if (notifications.isEmpty) {
-                  return const EmptyStateView(
-                    icon: Icons.notifications_none_rounded,
-                    title: 'No Notifications Yet',
-                    message:
-                        'You are all caught up! Updates about your submissions, campaigns, and rewards will appear here.',
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  itemCount: notifications.length,
-                  itemBuilder: (context, index) {
-                    final item = notifications[index];
-
-                    IconData icon;
-                    Color iconColor;
-
-                    switch (item.type.toUpperCase()) {
-                      case 'REWARD_CLAIMABLE':
-                      case 'PAYMENT_SETTLED':
-                        icon = Icons.monetization_on_rounded;
-                        iconColor = AppColors.mintActive;
-                        break;
-                      case 'VALIDATION_PASSED':
-                      case 'SUBMISSION_UPDATE':
-                        icon = Icons.verified_rounded;
-                        iconColor = AppColors.info;
-                        break;
-                      case 'REVIEW_REQUIRED':
-                        icon = Icons.flag_rounded;
-                        iconColor = AppColors.warning;
-                        break;
-                      default:
-                        icon = Icons.notifications_active_rounded;
-                        iconColor = AppColors.celoGold;
-                        break;
-                    }
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: !item.isRead
-                              ? AppColors.mintActive.withValues(alpha: 0.5)
-                              : AppColors.mintBorder,
-                          width: !item.isRead ? 1.5 : 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.ink.withValues(alpha: 0.04),
-                            blurRadius: 14,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: InkWell(
-                        onTap: () => _handleMarkAsRead(item),
-                        borderRadius: BorderRadius.circular(24),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: iconColor.withValues(alpha: 0.14),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Icon(icon, color: iconColor, size: 20),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            item.title,
-                                            style: GoogleFonts.bricolageGrotesque(
-                                              fontWeight:
-                                                  item.isRead ? FontWeight.w600 : FontWeight.bold,
-                                              fontSize: 14,
-                                              color: AppColors.ink,
-                                            ),
-                                          ),
-                                        ),
-                                        if (!item.isRead)
-                                          Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: const BoxDecoration(
-                                              color: AppColors.mintActive,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      item.message,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12.5,
-                                        color: AppColors.textMuted,
-                                        height: 1.35,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
